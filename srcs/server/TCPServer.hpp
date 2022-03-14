@@ -32,17 +32,6 @@ class TCPServer {
 
         // methods
         void start(void);
-
-        // exceptions
-        class SocketCreationException : public std::exception {
-            virtual const char *what() const throw();
-        };
-        class SocketBindingException : public std::exception {
-            virtual const char *what() const throw();
-        };
-        class SocketListenException : public std::exception {
-            virtual const char *what() const throw();
-        };
 };
 
 std::ostream &operator<<(std::ostream &o, TCPServer &instance);

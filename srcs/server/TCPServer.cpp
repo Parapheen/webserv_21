@@ -37,44 +37,8 @@ void TCPServer::_init(void) {
     this->_listen();
 }
 
-// int TCPServer::_getClient(const int &fd) const {
-//     std::vector<const int>::iterator iter = std::find(this->_clients.begin(), this->_clients.end(), fd);
-//     int index = std::distance(this->_clients.begin(), iter);
-//     return (index);
-// }
-
-// void TCPServer::_addClient(const uintptr_t &ident) {
-//     struct sockaddr_storage addr;
-//     struct kevent evSet;
-//     socklen_t socklen = sizeof(addr);
-    
-//     int fd = accept(ident, (struct sockaddr *) &addr, &socklen);
-//     if (fd < 0)
-//         throw std::system_error(EFAULT, std::generic_category());
-//     this->_clients.push_back(fd);
-//     EV_SET(&evSet, fd, EVFILT_READ, EV_ADD, 0, 0, NULL);
-//     kevent(this->_eventLoop, &evSet, 1, NULL, 0, NULL);
-//     char msg[80];
-//     sprintf(msg, "welcome! you are client #%d!\n", this->_getClient(fd));
-//     send(fd, msg, strlen(msg), 0);
-//     return;
-// }
-
-
-// void TCPServer::_deleteClient(const uintptr_t &ident) {
-//     struct kevent evSet;
-
-//     EV_SET(&evSet, ident, EVFILT_READ, EV_DELETE, 0, 0, NULL);
-//     kevent(this->_eventLoop, &evSet, 1, NULL, 0, NULL);
-//     std::vector<const int>::iterator iter = std::find(this->_clients.begin(), this->_clients.end(), ident);
-//     this->_clients.erase(iter);
-//     return;
-// }
 
 void TCPServer::_run(void) {
-    // int clientSocket;
-    // sockaddr clientaddr;
-    // long valRead;
     struct kevent evList[10];
 
     while (true) {
@@ -84,7 +48,6 @@ void TCPServer::_run(void) {
                 // add client logic
                 try {
                     this->_clientManager.addClient(evList[i].ident);
-                    // this->_addClient(evList[i].ident);
                 }
                 catch(const std::exception& e) {
                     throw e;
@@ -93,7 +56,6 @@ void TCPServer::_run(void) {
             else if (evList[i].flags & EV_EOF) {
                 try {
                     this->_clientManager.deleteClient(evList[i].ident);
-                    // this->_deleteClient(evList[i].ident);
                 }
                 catch(const std::exception& e) {
                     throw e;

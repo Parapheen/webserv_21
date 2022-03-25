@@ -5,8 +5,6 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <iostream>
-// #include <algorithm>
-// #include <vector>
 #include <string>
 #include <unistd.h>
 #include "ClientsManager.hpp"
@@ -23,16 +21,11 @@ class TCPServer {
 
         ClientsManager      _clientManager; // manage client connections
 
-        // std::vector<int>    _clients;
-
         void                _createSocket(void);
         void                _createEventLoop(void);
         void                _bind(void);
         void                _listen(void);
         void                _init(void);
-        // int                 _getClient(const int &fd) const;
-        // void                _addClient(const uintptr_t &ident);
-        // void                _deleteClient(const uintptr_t &ident);
         void                _run(void);
 
     public:

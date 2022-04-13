@@ -7,6 +7,7 @@
 #include <iostream>
 #include <string>
 #include <unistd.h>
+#include <fcntl.h>
 #include "ClientsManager.hpp"
 
 class TCPServer {
@@ -14,7 +15,7 @@ class TCPServer {
         int                 _socketfd; // server socket for LISTEN
         sockaddr_in         _sockaddr;
 
-        int                 _eventLoop; // kevent loop
+        int                 _eventLoop; // kevent loop !ptr!
 
         int                 _port; // port is parsed by config
         int                 _numberOfConnections; // not sure here
@@ -22,25 +23,24 @@ class TCPServer {
         ClientsManager      _clientManager; // manage client connections
 
         void                _createSocket(void);
-        void                _createEventLoop(void);
+        void                _bindToEventLoop(void);
         void                _bind(void);
         void                _listen(void);
         void                _init(void);
-        void                _run(void);
 
     public:
-        TCPServer(void);
+        TCPServer(const int &eventLoop, const int &port); // more complex constructor needed
         ~TCPServer(void);
         TCPServer(const TCPServer &instance);
 
         TCPServer &operator=(const TCPServer &rhs);
 
         // getters
-        void getSocketFd(void) const;
-        void getSocketAddr(void) const;
+        const int       &getSocketFd(void) const;
+        const sockaddr  &getSocketAddr(void) const;
 
         // methods
-        void start(void);
+        void handle(const struct kevent &event);
 };
 
 std::ostream &operator<<(std::ostream &o, TCPServer &instance);

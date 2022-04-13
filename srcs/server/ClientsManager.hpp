@@ -20,10 +20,12 @@ class ClientsManager {
 
         ClientsManager &operator=(const ClientsManager &rhs);
 
-        const std::vector<int>    &getClients(void) const;
-        int                 getClient(const int &fd) const;
-        void                addClient(const uintptr_t &ident);
-        void                deleteClient(const uintptr_t &ident);
+        const std::vector<int>      &getClients(void) const;
+        int                         getClient(const int &fd) const;
+        void                        addClient(const uintptr_t &ident);
+        void                        deleteClient(const uintptr_t &ident);
 
-        void                setEventLoop(const int &eventLoop);
+        void                        setEventLoop(const int &eventLoop);
 };
+
+std::ostream &operator<<(std::ostream &o, ClientsManager &instance);

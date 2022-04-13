@@ -1,9 +1,9 @@
-#include "server/TCPServer.hpp"
+#include "server/ServersManager.hpp"
 
 int main(void)
 {
-    TCPServer server = TCPServer();
+    ServersManager webserv = ServersManager();
 
-    server.start();
+    webserv.run();
     return (0);
 }

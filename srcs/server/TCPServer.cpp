@@ -12,6 +12,17 @@ TCPServer::TCPServer(const int &eventLoop, const int &port) : _eventLoop(eventLo
     }
 }
 
+TCPServer::TCPServer(const TCPServer &instance) {
+    *this = instance;
+    return;
+}
+
+TCPServer &TCPServer::operator=(const TCPServer &rhs) {
+    if (this->getSocketFd() != rhs.getSocketFd())
+        this->_socketfd = rhs._socketfd;
+    return *this;
+}
+
 void TCPServer::_createSocket(void) {
     this->_socketfd = socket(AF_INET, SOCK_STREAM, 0);
     if (this->_socketfd == -1)
@@ -21,7 +32,7 @@ void TCPServer::_createSocket(void) {
 
 void TCPServer::_bind(void) {
     this->_sockaddr.sin_family = AF_INET;
-    this->_sockaddr.sin_addr.s_addr = INADDR_ANY;
+    this->_sockaddr.sin_addr.s_addr = INADDR_ANY; // host
     this->_sockaddr.sin_port = htons(this->_port); // port
     if (bind(this->_socketfd, (struct sockaddr*)&this->_sockaddr, sizeof(sockaddr)) < 0)
         throw std::system_error(EFAULT, std::generic_category());
@@ -38,7 +49,6 @@ void TCPServer::_bindToEventLoop(void) {
 
     EV_SET(&evSet, this->_socketfd, EVFILT_READ, EV_ADD, 0, 0, NULL);
     kevent(this->_eventLoop, &evSet, 1, NULL, 0, NULL);
-    this->_clientManager.setEventLoop(this->_eventLoop);
 }
 
 void TCPServer::_init(void) {
@@ -47,46 +57,6 @@ void TCPServer::_init(void) {
     this->_bind();
     this->_listen();
 }
-
-
-void TCPServer::handle(const struct kevent &event) {
-    if ((int)event.ident == this->_socketfd) {
-        try {
-            this->_clientManager.addClient(event.ident);
-        }
-        catch(const std::exception& e) {
-            throw e;
-        }
-    } // client disconnected
-    else if (event.flags & EV_EOF) {
-        try {
-            this->_clientManager.deleteClient(event.ident);
-        }
-        catch(const std::exception& e) {
-            throw e;
-        }
-    } // read message from client
-    else if (event.filter == EVFILT_READ) {
-        // process http request
-        char buf[2048];
-        int bytes_read = recv(event.ident, buf, sizeof(buf) - 1, 0);
-        buf[bytes_read] = 0;
-        printf("client #%d: %s", this->_clientManager.getClient(event.ident), buf);
-        fflush(stdout);
-    }
-}
-
-// void TCPServer::start(void) {
-//     try
-//     {
-//         this->_init();
-//     }
-//     catch(const std::exception& e)
-//     {
-//         std::cerr << "FATAL: " << e.what() << std::endl;
-//         exit(EXIT_FAILURE);
-//     }
-// }
 
 const int   &TCPServer::getSocketFd(void) const {
     return this->_socketfd;

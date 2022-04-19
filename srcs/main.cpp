@@ -1,8 +1,8 @@
-#include "server/ServersManager.hpp"
+#include "server/Webserver.hpp"
 
 int main(void)
 {
-    ServersManager webserv = ServersManager();
+    Webserver webserv = Webserver();
 
     webserv.run();
     return (0);

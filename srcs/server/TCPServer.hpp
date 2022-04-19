@@ -8,6 +8,7 @@
 #include <string>
 #include <unistd.h>
 #include <fcntl.h>
+#include <arpa/inet.h>
 #include "ClientsManager.hpp"
 
 class TCPServer {
@@ -16,11 +17,9 @@ class TCPServer {
         sockaddr_in         _sockaddr;
 
         int                 _eventLoop; // kevent loop !ptr!
-
+        
         int                 _port; // port is parsed by config
         int                 _numberOfConnections; // not sure here
-
-        ClientsManager      _clientManager; // manage client connections
 
         void                _createSocket(void);
         void                _bindToEventLoop(void);
@@ -38,9 +37,6 @@ class TCPServer {
         // getters
         const int       &getSocketFd(void) const;
         const sockaddr  &getSocketAddr(void) const;
-
-        // methods
-        void handle(const struct kevent &event);
 };
 
 std::ostream &operator<<(std::ostream &o, TCPServer &instance);

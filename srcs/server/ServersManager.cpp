@@ -1,36 +1,33 @@
 #include "ServersManager.hpp"
 
-ServersManager::ServersManager(void) {
-    this->_eventLoop = kqueue();
+ServersManager::ServersManager(const EventLoop &eventLoop) : Manager<TCPServer>(eventLoop) {
     return;
 }
 
-const int &ServersManager::getEventLoop(void) const {
-    return this->_eventLoop;
-}
-
-const std::map<std::string, TCPServer> &ServersManager::getServers(void) const {
+const std::map<std::string, TCPServer *> &ServersManager::getServers(void) const {
     return this->_servers;
 }
 
-void ServersManager::run(void) {
-    TCPServer   serverOne = TCPServer(this->getEventLoop(), 8004);
-    TCPServer   serverTwo = TCPServer(this->getEventLoop(), 8005);
-    struct kevent evList[10];
+void    ServersManager::addSocket(const int &fd, TCPServer *server) {
+    this->addOne(fd, server);
+    return ;
+}
 
-    this->_servers.insert(std::pair<std::string, TCPServer>("serverOne", serverOne));
-    this->_servers.insert(std::pair<std::string, TCPServer>("serverTwo", serverTwo));
-    int fdOne = serverOne.getSocketFd();
-    int fdTwo = serverTwo.getSocketFd();
-    this->_sockets.insert(std::pair<int, TCPServer>(fdOne, serverOne));
-    this->_sockets.insert(std::pair<int, TCPServer>(fdTwo, serverTwo));
-    while (true) {
-        int num_events = kevent(this->_eventLoop, NULL, 0, evList, 10, NULL);
-        for (int i = 0; i < num_events; i++) {
-            int serverSocket = (int)evList[i].ident;
-            this->_sockets.at(serverSocket).handle(evList[i]);
-        }
-    }
+const std::map<int, TCPServer *>    &ServersManager::getSockets(void) const {
+    return this->getAll();
+}
+
+const TCPServer     *ServersManager::getServerBySocket(const int &fd) const {
+    return this->getOne(fd);
+}
+
+void    ServersManager::removeSocket(const int &fd) {
+    return this->removeOne(fd);
+}
+
+void    ServersManager::addServer(const std::string &serverName, TCPServer *server) {
+    this->_servers.insert(std::pair<std::string, TCPServer *>(serverName, server));
+    this->addSocket(server->getSocketFd(), server);
 }
 
 ServersManager::~ServersManager(void) { return; }

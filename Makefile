@@ -4,7 +4,9 @@ COLOR_RESET		= 		"\033[0m"
 
 NAME			=		webserv
 
-SRCS 			=		srcs/main.cpp srcs/server/TCPServer.cpp
+SRCS 			=		srcs/main.cpp srcs/server/TCPServer.cpp srcs/server/ClientsManager.cpp \
+						srcs/server/ServersManager.cpp srcs/server/Client.cpp \
+						srcs/server/Webserver.cpp srcs/server/EventLoop.cpp
 
 OBJS			=		${SRCS:.cpp=.o}
 

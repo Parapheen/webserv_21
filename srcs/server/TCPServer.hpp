@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
+#include "../parser/ServerCfg.hpp"
 #include "ClientsManager.hpp"
 
 class TCPServer {
@@ -16,9 +17,9 @@ class TCPServer {
         int                 _socketfd; // server socket for LISTEN
         sockaddr_in         _sockaddr;
 
-        int                 _eventLoop; // kevent loop !ptr!
+        int                 _eventLoop; // kevent loop
         
-        int                 _port; // port is parsed by config
+        ServerCfg           _config;
         int                 _numberOfConnections; // not sure here
 
         void                _createSocket(void);
@@ -28,7 +29,7 @@ class TCPServer {
         void                _init(void);
 
     public:
-        TCPServer(const int &eventLoop, const int &port); // more complex constructor needed
+        TCPServer(const int &eventLoop, const ServerCfg &config);
         ~TCPServer(void);
         TCPServer(const TCPServer &instance);
 

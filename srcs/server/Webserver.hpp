@@ -19,5 +19,5 @@ class Webserver {
         ~Webserver(void);
 
         void        handleEvent(const struct kevent &event);
-        void        run(void);
+        void        run(const std::vector<ServerCfg> &servers);
 };

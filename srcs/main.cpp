@@ -12,10 +12,10 @@ int main(int argc, char **argv)
     }
     try {
         parser.parse(argv[1]);
+        webserv.run(parser.getServers());
     }
     catch (std::exception &e) {
         std::cerr << e.what() << std::endl;
     }
-    // webserv.run();
     return (0);
 }

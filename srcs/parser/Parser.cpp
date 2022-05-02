@@ -172,6 +172,8 @@ void    Parser::parse(const std::string &filePath) {
     }
 }
 
+const   std::vector<ServerCfg>  Parser::getServers(void) const { return this->_servers;}
+
 Parser::~Parser(void) {
     return;
 }

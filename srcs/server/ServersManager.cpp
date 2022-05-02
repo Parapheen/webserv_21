@@ -30,4 +30,12 @@ void    ServersManager::addServer(const std::string &serverName, TCPServer *serv
     this->addSocket(server->getSocketFd(), server);
 }
 
-ServersManager::~ServersManager(void) { return; }
+ServersManager::~ServersManager(void) {
+    std::map<std::string, TCPServer *>::iterator it = this->_servers.begin();
+    while (it != this->_servers.end()) {
+        if (it->second)
+            delete it->second;
+        ++it;
+    }
+    return;
+}

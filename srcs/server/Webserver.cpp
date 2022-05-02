@@ -12,8 +12,8 @@ Webserver::Webserver(const Webserver &instance) {
 }
 
 Webserver &Webserver::operator=(const Webserver &rhs) {
-    // TODO: finish here
-    (void) rhs;
+    if (this->_eventLoop.getEventLoop() != rhs._eventLoop.getEventLoop())
+        this->_eventLoop = rhs._eventLoop;
     return *this;
 }
 
@@ -46,15 +46,15 @@ void    Webserver::handleEvent(const struct kevent &event) {
     }
 }
 
-void    Webserver::run(void) {
+void    Webserver::run(const std::vector<ServerCfg> &servers) {
     // init servers
-    TCPServer   *serverOne = new TCPServer(this->_eventLoop.getEventLoop(), 8088);
-    TCPServer   *serverTwo = new TCPServer(this->_eventLoop.getEventLoop(), 8089);
+    for(size_t i = 0; i < servers.size(); i++) {
+        TCPServer *newServ = new TCPServer(this->_eventLoop.getEventLoop(), servers[i]);
+        this->_serversManager->addServer(servers[i].getName(), newServ);
+    }
     const int   evSize = this->_eventLoop.getEventListSize(); 
     struct kevent eventList[evSize];
 
-    this->_serversManager->addServer("serverOne", serverOne);
-    this->_serversManager->addServer("serverTwo", serverTwo);
     while (true) {
         int num_events = kevent(this->_eventLoop.getEventLoop(), NULL, 0, eventList, evSize, NULL);
         for (int i = 0; i < num_events; i++) {

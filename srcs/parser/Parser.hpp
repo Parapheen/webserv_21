@@ -12,7 +12,7 @@ class Parser {
         Lexer                       _lexer;
 
         std::vector<ServerCfg>      _servers;
-        
+
         bool                        _isNumber(const std::string &s) const;
         bool                        _fileExists(const std::string &path) const;
         void                        _addServer(const ServerCfg &server);
@@ -27,5 +27,6 @@ class Parser {
         Parser  &operator=(const Parser &rhs);
 
         ~Parser(void);
+        const   std::vector<ServerCfg>  getServers(void) const;
         void    parse(const std::string &filePath);
 };

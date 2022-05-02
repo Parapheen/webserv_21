@@ -6,7 +6,7 @@
 template <class T>
 class Manager {
     private:
-        std::map<int, T *>    _elements; // usually would contain fd and eventType / server / client
+        std::map<int, T *>          _elements; // usually would contain fd and eventType / server / client
 
     protected:
         EventLoop                   _eventLoop; // kevent loop
@@ -67,4 +67,12 @@ void Manager<T>::removeOne(const int &key) {
 }
 
 template <class T>
-Manager<T>::~Manager(void) { return; }
+Manager<T>::~Manager(void) {
+    typename std::map<int, T *>::iterator it = this->_elements.begin();
+    while (it != this->_elements.end()) {
+        if (it->second)
+            delete it->second;
+        ++it;
+    }
+    return;
+}

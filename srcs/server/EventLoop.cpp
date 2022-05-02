@@ -1,8 +1,6 @@
 #include "EventLoop.hpp"
 
-EventLoop::EventLoop(void) {
-    this->_loop = kqueue();
-}
+EventLoop::EventLoop(void) : _loop(kqueue()), _evListSize(10) { return ;}
 
 EventLoop::EventLoop(const EventLoop &instance) {
     *this = instance;

@@ -1,20 +1,18 @@
 #include "TCPServer.hpp"
 
-TCPServer::TCPServer(const int &eventLoop, const int &port) : _eventLoop(eventLoop), _port(port) { 
-    try
-    {
-        this->_init();
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << "FATAL: " << e.what() << std::endl;
-        exit(EXIT_FAILURE);
-    }
-}
-
 TCPServer::TCPServer(const TCPServer &instance) {
     *this = instance;
     return;
+}
+
+TCPServer::TCPServer(const int &eventLoop, const ServerCfg &config) : _eventLoop(eventLoop), _config(config) {
+    try {
+        this->_init();
+    }
+    catch(const std::exception& e) {
+        std::cerr << "FATAL: " << e.what() << std::endl;
+        exit(EXIT_FAILURE);
+    }
 }
 
 TCPServer &TCPServer::operator=(const TCPServer &rhs) {
@@ -33,7 +31,7 @@ void TCPServer::_createSocket(void) {
 void TCPServer::_bind(void) {
     this->_sockaddr.sin_family = AF_INET;
     this->_sockaddr.sin_addr.s_addr = INADDR_ANY; // host
-    this->_sockaddr.sin_port = htons(this->_port); // port
+    this->_sockaddr.sin_port = htons(this->_config.getPort()); // port
     if (bind(this->_socketfd, (struct sockaddr*)&this->_sockaddr, sizeof(sockaddr)) < 0)
         throw std::system_error(EFAULT, std::generic_category());
 }
@@ -41,7 +39,7 @@ void TCPServer::_bind(void) {
 void TCPServer::_listen(void) {
     if (listen(this->_socketfd, 10) < 0) // number of connections
         throw std::system_error(EFAULT, std::generic_category());
-    std::cout << "Listening... " << this->_socketfd << " " << this->_port << std::endl;
+    std::cout << "Listening... " << this->_socketfd << " " << this->_config.getPort() << std::endl;
 }
 
 void TCPServer::_bindToEventLoop(void) {

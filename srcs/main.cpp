@@ -1,9 +1,21 @@
 #include "server/Webserver.hpp"
+#include "parser/Parser.hpp"
 
-int main(void)
+int main(int argc, char **argv)
 {
-    Webserver webserv = Webserver();
+    Parser      parser = Parser();
+    Webserver   webserv = Webserver();
 
-    webserv.run();
+    if (argc != 2) {
+        std::cerr << "Invalid arguments" << std::endl;
+        return (1);
+    }
+    try {
+        parser.parse(argv[1]);
+    }
+    catch (std::exception &e) {
+        std::cerr << e.what() << std::endl;
+    }
+    // webserv.run();
     return (0);
 }

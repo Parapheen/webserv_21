@@ -6,7 +6,9 @@ NAME			=		webserv
 
 SRCS 			=		srcs/main.cpp srcs/server/TCPServer.cpp srcs/server/ClientsManager.cpp \
 						srcs/server/ServersManager.cpp srcs/server/Client.cpp \
-						srcs/server/Webserver.cpp srcs/server/EventLoop.cpp
+						srcs/server/Webserver.cpp srcs/server/EventLoop.cpp \
+						srcs/parser/Lexer.cpp srcs/parser/Parser.cpp srcs/parser/ServerCfg.cpp \
+						srcs/parser/LocationCfg.cpp
 
 OBJS			=		${SRCS:.cpp=.o}
 

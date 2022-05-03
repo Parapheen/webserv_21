@@ -95,31 +95,31 @@ Response Request::parse(std::string message)
     size_t pos1, pos2;
 
     if (message.find("\r\n") == std::string::npos)
-        return Response("400");
+        return Response("400", _uri);
     std::string firstLine = message.substr(0, message.find("\r\n"));
     if ((pos1 = firstLine.find_first_of(" ")) == std::string::npos)
-        return Response("400");
+        return Response("400", _uri);
     _method = firstLine.substr(0, pos1);
     if ((pos2 = firstLine.find_last_of(" ")) == std::string::npos)
-        return Response("400");
+        return Response("400", _uri);
     _version = firstLine.substr(pos2 + 1);
     _uri = firstLine.substr(pos1 + 1, pos2 - 1 - pos1);
     if (_version[0] == ' ' || _uri[0] == ' ')
-        return Response("400");
+        return Response("400", _uri);
 
 
     // The presence of a message body in a request is signaled by a Content-Length or Transfer-Encoding header field !!!
     if (message.find("\r\n\r\n") == std::string::npos) // ?? if no \r\n\r\n then there is no headers and shoul be \r\n
     {
         if (message.find("\r\n") == std::string::npos)
-            return Response("400");
+            return Response("400", _uri);
         else
             _body = message.substr(message.find("\r\n") + 2);
     }
     else
     {
         if (getHeaders(message.substr(message.find("\r\n") + 2, message.find("\r\n\r\n") - message.find("\r\n"))))
-            return Response("400");
+            return Response("400", _uri);
         _body = message.substr(message.find("\r\n\r\n") + 4);
     }
     return execute();
@@ -128,18 +128,16 @@ Response Request::parse(std::string message)
 Response Request::execute()
 {
     Response resp;
-    std::string methods[3] = {"GET", "POST", "DELETE"};
-    // printRequest(req);
     if (_version != "HTTP/1.1")
-        return Response("505");
-    if (_method == methods[0])
+        return Response("505", _uri);
+    if (_method == "GET")
         resp = execGet();
-    else if (_method == methods[1])
+    else if (_method == "POST")
         resp = execPost();
-    else if (_method == methods[2])
+    else if (_method == "DELETE")
         resp = execDelete();
     else
-        return Response("405");
+        return Response("405", _uri);
     return resp;
 };
 
@@ -172,16 +170,27 @@ Response Request::execGet()
     Response resp;
     std::string strh;
     std::string my_str;
-    //std::cout << "uri: |" << req._uri << "|\n";
     
-    //you need to parse uri because uri include params
-    
+    struct stat buffer;
+    std::string path;
+
     parseUri();
+
+    std::map<std::string, std::string> paths;
+
+    for (std::vector<LocationCfg>::const_iterator it = _conf.getLocations().begin(); it != _conf.getLocations().end(); it++)
+    {
+        path = it->getRoot() + _uri;
+        if (stat(path.c_str(), &buffer))
+            paths[it->getPath()] = path;    
+    }
+    //find path with max lenght and ??
+
     if (_uri == "/" || _uri == "index.html")
         _uri = "index.html";
     fs.open(_uri);
     if (!fs.good())
-        return Response("500"); 
+        return Response("500", _uri); 
     while(!fs.eof())
     {
         std::getline(fs, strh);
@@ -189,32 +198,61 @@ Response Request::execGet()
         if (!fs.eof())
             my_str += '\n';
     }
-    _body = my_str;
+    //_body = my_str;
+    resp.setBody(my_str);
     fs.close();
-    resp.setHeaders();    
+    //resp.setHeaders(_uri);
+    resp.setHeaders(_headers["Content-Language"], _uri);
     return resp;
+};
+
+std::string myToLower(std::string str)
+{
+    for (size_t i = 0; i < str.size(); i++)
+        str[i] = std::tolower(str[i]);
+    return str;
 };
 
 Response Request::execPost()
 {
-    std::ifstream ifs (_uri);
-    // check uri is CGI?? need to get PATH_INFO from envp
-    // if (!isCGI(_uri))
-    // {
-    //     if (!ifs.is_open())
-    //     {
-    //         std::ofstream ofs;
-        
-    //         ofs.open(_uri.substr(1));
-    //         ofs << _body;
-    //         ofs.close();
-    //     }
+    size_t point;
+    // Когда веб-браузер отправляет POST-запрос с элементами веб-формы, по умолчанию интернет-тип данных медиа — application/x-www-form-urlencoded, типы не чувствительны к регистру 
+    std::string type;
+    if (_headers.find("Content-Type") != _headers.end() && (type = _headers.find("Content-Type")->second) == "application/x-www-form-urlencoded")
+    {
+        //std::transform(type.begin(), type.end(), type.begin(), [](unsigned char c) -> { return std::tolower(c); });
+        type = myToLower(type);
 
 
-    // }
+    }
+    else if ((point = _uri.find_last_of(".")) != std::string::npos) // how to check cgi
+    {
+        std::map<std::string, std::string> params; // maybe it isn't nesseccary and put all body to cgi
+        // if (_uri.substr(point + 1) == _conf._cgiExpansion)
+        // {
+        //     // Cgi cgi(_uri, _headers, params);
+        //     // return Response(cgi.result());
+        // }
+        // else
+        //     return Response("500" , _uri); // ?????
+    }
+    else //
+    {
+        //std::string path = _conf.location + _uri;
 
-    return Response("200");
-
+        std::fstream fs;
+        fs.open(_uri);
+        if (!fs.is_open())
+        {
+            fs.clear();
+            fs.open(_uri, std::ios::out);
+            fs.close();
+            fs.open(_uri);
+        }
+        fs << _body;
+        fs.close();
+    }
+    return Response("200", _uri);
 };
 
 Response Request::execDelete()
@@ -224,18 +262,45 @@ Response Request::execDelete()
     if (!stat(_uri.c_str(), &buffer))
     {
         if (buffer.st_mode & S_IFDIR)
-            return Response("404");
+            return Response("404", _uri);
         if (!(buffer.st_mode & S_IRUSR))
-            return Response("403");
+            return Response("403", _uri);
         if (!remove(_uri.c_str())) // if file removed 0 will be returned
-            return Response("403");
+            return Response("403", _uri);
     }
     else
-        return Response("404");
-    return Response("200"); // return 204 if response without body
+        return Response("404", _uri);
+    return Response("200", _uri); // return 204 if response without body
 };
 
-void Request::printRequest(Request req)
+// void Request::printRequest(Request req)
+// {
+//     (void)req;
+// };
+
+std::string Request::getRequest()
 {
-    (void)req;
+    std::string request = "";
+    request += (_method + " " + _uri + " " + _version + "\r\n");
+    for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); it++)
+        request += (it->first + ": " + it->second + "\r\n"); 
+    if (_body != "")
+        request += ("\r\n" + _body + "\r\n");
+    return request;
+};
+
+void Request::setConfig(ServerCfg config)
+{
+    _conf = config;
+};
+
+ServerCfg Request::getConfig() const
+{
+    return _conf;
+};
+
+std::ostream& operator<<(std::ostream &out, Request request)
+{
+    out << request.getRequest();
+    return out;
 };

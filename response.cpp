@@ -1,14 +1,30 @@
 #include "response.hpp"
 
 Response::Response():
-    _version("HTTP/1.1"), _statusCode("200"), _headers(std::map<std::string, std::string>()), _body("") {};
+    _version("HTTP/1.1"), _statusCode("200"), _headers(std::map<std::string, std::string>()), _body("")
+{
+    initHeaders();
+    initStatusMessages();
+    //setHeaders(); // ???? uri is need, but what is uri for nothing?? maybe there no default constructor??
+};
 
 Response::Response(Response const& copy):
-    _version(copy._version), _statusCode(copy._statusCode), _headers(copy._headers), _body(copy._body) {};
-
-Response::Response(std::string const statusCode)
+    _version(copy._version), _statusCode(copy._statusCode), _headers(copy._headers), _body(copy._body)
 {
-    std::cout << "st. code: " << statusCode << std::endl;
+    initHeaders();
+    initStatusMessages();
+};
+
+Response::Response(std::string const statusCode, std::string uri)
+{
+    std::cout << "STATUS CODE\n";
+    initHeaders();
+    initStatusMessages();
+    //std::cout << "st. code: " << statusCode << std::endl;
+    _version = "HTTP/1.1";
+    _statusCode = statusCode;
+    std::cout << "before headers\n";
+    setHeaders(uri);
     //create response depends on status code, maybe same response.error(statusCode) ?? 
 };
 
@@ -16,6 +32,8 @@ Response& Response::operator=(Response const& source)
 {
     if (this != &source)
     {
+        initHeaders();
+        initStatusMessages();
         _version = source._version;
         _statusCode = source._statusCode;
         _headers = source._headers;
@@ -42,43 +60,26 @@ void Response::initStatusMessages()
 
 void Response::initHeaders()
 {
-    _headers["Allow"] = "";
-    //_headers["Host"] = "127.0.0.1";
-    //_headers["Port"] = "80";
     _headers["Connection"] = "keep-alive";
-    _headers["Date"] = "";
-    _headers["Last-Modified"] = "";
-    _headers["User-Agent"] = "Chrome/96.0.4664.55";
-    _headers["Accept-Encoding"] = "";
-    _headers["Accept-Language"] = "";
-    _headers["Server"] = "Webserv jrandee && odomenic && nscarab (MacOS)";
-    _headers["Content-Type"] = "";
-    _headers["Content-Encoding"] = "";
-    _headers["Content-Lenght"] = "";
-    _headers["Content-Location"] = "";
-    _headers["Content-Language"] = "";
-
-    //control data 7.1 in RFC
-    _headers["Location"] = "";
-    _headers["Transfer-Encoding"] = ""; // chanked
-    _headers["Retry-After"] = "";
-    _headers["WWW-Authenticate"] = ""; // for what??
-
-    // _headers["Very"] = ""; // this header is nesseccary??
-
+    //_headers["User-Agent"] = "Chrome/96.0.4664.55";
+    _headers["Server"] = "Webserv MacOS";
 };
 
-void Response::setHeaders()
+void Response::setHeaders(std::string lang, std::string uri)
 {
-    setAllow();
-    setDate();
-    //setContentType();
-    setContentLenght();
-    // _response._headers["Last-Modified"] = "";
-    // _response._headers["Accept-Encoding"] = "";
-    // _response._headers["Accept-Language"] = "";
-    // _response._headers["Content-Encoding"] = "";
-    // _response._headers["Content-Location"] = "";
+    setDate(); // +
+    //setContentType(file);
+    setContentType(uri); // +
+    setContentLenght(); // +
+    setContentLocation(uri); // is it correct? 
+    setContentLanguage(lang); // +
+    setAllow();  // +
+    //setLastModified(file);
+    setLastModified(uri); // +
+    setLocation(uri);
+    setRetryAfter(); // +
+    setTransferEncoding(); // ????
+    setWwwAuthenticate(); // +
 };
 
 void Response::setDate()
@@ -88,7 +89,6 @@ void Response::setDate()
     char buffer[100];
     strftime(buffer, 100, "%a, %d %b %Y %H:%M:%S GMT", timeinfo);
     _headers["Date"] = buffer;
-    //std::cout << "Date: " << _headers["Date"] << std::endl;
 };
 
 void Response::setContentType(std::string file)
@@ -122,33 +122,26 @@ void Response::setContentType(std::string file)
 void Response::setContentLenght()
 {
     std::stringstream oss;
-    std::map<std::string, std::string>::iterator find_it = _headers.find("Content-Length");
-
-    if (find_it == _headers.end())
-    {
-        oss << _body.size();
-        _headers["Content-Lenght"] = oss.str();
-    }
-    else
-        find_it->second = _body.size();
+    
+    oss << _body.size();
+    _headers["Content-Lenght"] = oss.str();
 };
 
-void Response::setContentEncoding()
-{};
+// void Response::setContentEncoding()
+// {};
 
-void Response::setContentLocation()
-{};
+void Response::setContentLocation(std::string const& uri)
+{
+    _headers["Content-Location"] = uri;
+};
 
-void Response::setContentLanguage()
-{};
+void Response::setContentLanguage(std::string const& lang)
+{
+    _headers["Content-Language"] = lang;
+};
 
 void Response::setAllow()
 {
-    // size_t i = 0;
-    // std::string methods[3] = {"GET", "POST", "DELETE"};
-    // for (i = 0; i < 2; i++)
-    //     _headers["Allow"] += (methods[i] + ", ");
-    // _headers["Allow"] += methods[i];
     _headers["Allow"] = "GET, POST, DELETE";
 };
 
@@ -165,41 +158,43 @@ void Response::setLastModified(std::string file)
     }
 };
 
-void Response::setAcceptLanguage()
-{};
+// void Response::setAcceptLanguage()
+// {
 
-void Response::setAcceptEncoding()
-{};
+// };
+
+// void Response::setAcceptEncoding()
+// {
+    
+// };
 
 void Response::setLocation(std::string uri)
 {
     if ((_statusCode == "201") || (_statusCode[0] == '3'))
         _headers["Location"] = uri;
-    else
-        return ; // remove header ??
+    // what value in other case ??
 };
 
 void Response::setRetryAfter()
 {
     if ((_statusCode == "503") || (_statusCode == "429") || (_statusCode == "301"))
         _headers["Retry-After"] = "10";
-    else
-        _headers["Retry-After"] = "0"; // or remove this header ??
-};
-
-void Response::setUserAgent()
-{
-
+    // else
+    //     _headers["Retry-After"] = "0"; // or remove this header ??
 };
 
 void Response::setTransferEncoding()
 {
 
+
 };
 
-void Response::setWWWAuthenticate()
+void Response::setWwwAuthenticate()
 {
-
+    if (_statusCode == "401")
+    {
+        _headers["WWW-Authenticate"] = "Basic realm=\"Assecc to the staging site\", charset=\"UTF-8\"";
+    }
 };
 
 void Response::error(std::string statusCode)
@@ -219,4 +214,15 @@ std::string Response::getResponse()
         response += ("\r\n" + _body + "\r\n");
     return response;
 
+};
+
+void Response::setBody(std::string body)
+{
+    _body = body;    
+};
+
+std::ostream& operator<<(std::ostream &out, Response response)
+{
+    out << "Response:\n" << response.getResponse();
+    return out;
 };

@@ -5,6 +5,11 @@
 #include <map>
 #include <fstream>
 #include <cstdio>
+#include "ServerCfg.hpp"
+
+struct config {
+    std::string cgiExpansion;
+};
 
 class Request
 {
@@ -14,6 +19,8 @@ private:
     std::string _version;
     std::map<std::string, std::string> _headers;
     std::string _body;
+
+    ServerCfg _conf;
 
 public:
     Request();
@@ -41,6 +48,13 @@ public:
     Response execPost();
     Response execDelete();
 
-    void printRequest(Request req);
+    //void printRequest(Request req);
+    std::string getRequest();
 
+    void setConfig(ServerCfg config);
+    ServerCfg getConfig() const;
 };
+
+std::ostream& operator<<(std::ostream &out, Request request);
+
+std::string myToLower(std::string str);

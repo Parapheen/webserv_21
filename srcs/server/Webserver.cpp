@@ -38,6 +38,8 @@ void    Webserver::handleEvent(const struct kevent &event) {
     } // read message from client
     else if (event.filter == EVFILT_READ) {
         // process http request
+        // if msg more than buffer
+        // chunked reading
         char buf[2048];
         int bytes_read = recv(event.ident, buf, sizeof(buf) - 1, 0);
         buf[bytes_read] = 0;

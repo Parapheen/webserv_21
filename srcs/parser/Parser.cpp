@@ -126,7 +126,7 @@ void    Parser::_parseServer(size_t *tokenPos, const std::vector<TokenPair> &tok
                 ++(*tokenPos);
                 if (!this->_isNumber(tokens[*tokenPos].first)) {
                     std::ostringstream errMsg;
-                    errMsg << "Parser error\nclient_body_buffer_size should be a valid number";
+                    errMsg << "Parser error\nclient_body_buffer_size should be a valid positive number";
                     throw std::runtime_error(errMsg.str());
                 }
                 newServer.setBodyBufferSize(std::atol(tokens[*tokenPos].first.c_str()));

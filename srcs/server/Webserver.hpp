@@ -2,6 +2,7 @@
 #include "Manager.hpp"
 #include "ServersManager.hpp"
 #include "ClientsManager.hpp"
+#include "../http/Request.hpp"
 #include "EventLoop.hpp"
 
 class Webserver {

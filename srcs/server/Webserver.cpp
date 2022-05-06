@@ -1,10 +1,7 @@
 #include "Webserver.hpp"
 
-Webserver::Webserver(void) {
-    this->_serversManager = new ServersManager(this->_eventLoop);
-    this->_clientsManager = new ClientsManager(this->_eventLoop);
-    return ;
-}
+Webserver::Webserver(void) : _serversManager(new ServersManager(this->_eventLoop)),
+    _clientsManager(new ClientsManager(this->_eventLoop)) { return ; }
 
 Webserver::Webserver(const Webserver &instance) {
     *this = instance;
@@ -19,10 +16,10 @@ Webserver &Webserver::operator=(const Webserver &rhs) {
 
 void    Webserver::handleEvent(const struct kevent &event) {
     // event socket equals to one of the server => new client
-    if (this->_serversManager->getServerBySocket(event.ident)) {
+    if (const TCPServer *server = this->_serversManager->getServerBySocket(event.ident)) {
         try {
             Client *newClient = this->_clientsManager->createNewClient(event.ident);
-            this->_clientsManager->addClient(event.ident, newClient);
+            this->_clientsManager->addClient(server, newClient);
         }
         catch(const std::exception& e) {
             throw e;
@@ -44,23 +41,26 @@ void    Webserver::handleEvent(const struct kevent &event) {
         int bytes_read = recv(event.ident, buf, sizeof(buf) - 1, 0);
         buf[bytes_read] = 0;
         printf("client at socketfd %lu: %s", event.ident, buf);
-        // this->_clientsManager->removeClient(event.ident);
+        ServerCfg server = this->_clientsManager->getServerByClientFd(event.ident)->getServerConfig();
+        Request request = Request();
+        request.setConfig(server); // pass to constructor instead
+        Response response = request.parse(buf);
+        std::string responseStr = response.getResponse();
+        std::cout << responseStr << std::endl;
+        send(event.ident, responseStr.c_str(), strlen(responseStr.c_str()), 0);
+        this->_clientsManager->removeClient(event.ident);
     }
 }
 
 void    Webserver::run(const std::vector<ServerCfg> &servers) {
-    // init servers
-    for(size_t i = 0; i < servers.size(); i++) {
-        TCPServer *newServ = new TCPServer(this->_eventLoop.getEventLoop(), servers[i]);
-        this->_serversManager->addServer(servers[i].getName(), newServ);
-    }
-    const int   evSize = this->_eventLoop.getEventListSize(); 
-    struct kevent eventList[evSize];
+    const int       evSize = this->_eventLoop.getEventListSize(); 
+    struct kevent   eventList[evSize];
 
+    this->_serversManager->init(servers);
     while (true) {
         int num_events = kevent(this->_eventLoop.getEventLoop(), NULL, 0, eventList, evSize, NULL);
         for (int i = 0; i < num_events; i++) {
-            int eventSocket = (int)eventList[i].ident;
+            int eventSocket = static_cast<int>(eventList[i].ident);
             std::cout << "Event socket: " << eventSocket << std::endl;
             this->handleEvent(eventList[i]);
         }

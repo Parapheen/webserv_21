@@ -56,9 +56,8 @@ void TCPServer::_init(void) {
     this->_listen();
 }
 
-const int   &TCPServer::getSocketFd(void) const {
-    return this->_socketfd;
-}
+const int   &TCPServer::getSocketFd(void) const { return this->_socketfd; }
+const ServerCfg &TCPServer::getServerConfig(void) const { return this->_config; }
 
 TCPServer::~TCPServer(void) {
     // cleanup, perhaps closing connections

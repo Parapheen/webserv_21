@@ -1,6 +1,6 @@
-#include "response.hpp"
+#include "Response.hpp"
 
-Response::Response():
+Response::Response(void):
     _version("HTTP/1.1"), _statusCode("200"), _headers(std::map<std::string, std::string>()), _body("")
 {
     initHeaders();
@@ -15,7 +15,7 @@ Response::Response(Response const& copy):
     initStatusMessages();
 };
 
-Response::Response(std::string const statusCode, std::string uri)
+Response::Response(std::string const &statusCode, const std::string &uri)
 {
     std::cout << "STATUS CODE\n";
     initHeaders();
@@ -65,7 +65,7 @@ void Response::initHeaders()
     _headers["Server"] = "Webserv MacOS";
 };
 
-void Response::setHeaders(std::string lang, std::string uri)
+void Response::setHeaders(const std::string &lang, const std::string &uri)
 {
     setDate(); // +
     //setContentType(file);
@@ -91,7 +91,7 @@ void Response::setDate()
     _headers["Date"] = buffer;
 };
 
-void Response::setContentType(std::string file)
+void Response::setContentType(const std::string &file)
 {
     size_t dot = file.find(".");
     std::string exp;
@@ -140,12 +140,12 @@ void Response::setContentLanguage(std::string const& lang)
     _headers["Content-Language"] = lang;
 };
 
-void Response::setAllow()
+void Response::setAllow(void)
 {
     _headers["Allow"] = "GET, POST, DELETE";
 };
 
-void Response::setLastModified(std::string file)
+void Response::setLastModified(const std::string &file)
 {
     struct stat buffer;
     char str[100];
@@ -168,14 +168,14 @@ void Response::setLastModified(std::string file)
     
 // };
 
-void Response::setLocation(std::string uri)
+void Response::setLocation(const std::string &uri)
 {
     if ((_statusCode == "201") || (_statusCode[0] == '3'))
         _headers["Location"] = uri;
     // what value in other case ??
 };
 
-void Response::setRetryAfter()
+void Response::setRetryAfter(void)
 {
     if ((_statusCode == "503") || (_statusCode == "429") || (_statusCode == "301"))
         _headers["Retry-After"] = "10";
@@ -183,13 +183,13 @@ void Response::setRetryAfter()
     //     _headers["Retry-After"] = "0"; // or remove this header ??
 };
 
-void Response::setTransferEncoding()
+void Response::setTransferEncoding(void)
 {
 
 
 };
 
-void Response::setWwwAuthenticate()
+void Response::setWwwAuthenticate(void)
 {
     if (_statusCode == "401")
     {
@@ -197,17 +197,17 @@ void Response::setWwwAuthenticate()
     }
 };
 
-void Response::error(std::string statusCode)
+void Response::error(const std::string &statusCode)
 {
     (void)statusCode;
 };
 
-std::string Response::getResponse()
+std::string Response::getResponse(void)
 {
     std::string response = "";
     response += (_version + " " + _statusCode + " " + _statusMessages[_statusCode] + "\r\n");
     for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); it++)
-        response += (it->first + ": " + it->second + "\r\n"); 
+        response += (it->first + ": " + it->second + "\r\n");
     
     // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include a message body !!!
     if (!(_statusCode == "204" || _statusCode == "304" || _statusCode[0] == '1'))
@@ -216,12 +216,12 @@ std::string Response::getResponse()
 
 };
 
-void Response::setBody(std::string body)
+void Response::setBody(const std::string &body)
 {
-    _body = body;    
+    _body = body;
 };
 
-std::ostream& operator<<(std::ostream &out, Response response)
+std::ostream& operator<<(std::ostream &out, Response &response)
 {
     out << "Response:\n" << response.getResponse();
     return out;

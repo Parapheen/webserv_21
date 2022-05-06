@@ -1,6 +1,6 @@
-#include "request.hpp"
+#include "Request.hpp"
 
-Request::Request(): _headers(std::map<std::string, std::string>()) {};
+Request::Request(void): _headers(std::map<std::string, std::string>()) {};
 
 Request::Request(Request const& copy): _method(copy._method), _uri(copy._uri), _version(copy._version), _headers(copy._headers), _body(copy._body) {};
 
@@ -17,56 +17,19 @@ Request& Request::operator=(Request const& source)
     return *this;
 };
 
-Request::~Request() {};
+Request::~Request(void) { return; };
 
-std::string Request::getMethod() const
-{
-    return _method;
-};
+const std::string &Request::getMethod(void) const { return _method; };
+const std::string &Request::getUri(void) const { return _uri; };
+const std::string &Request::getVersion(void) const { return _version; };
+const std::string &Request::getBody(void) const { return _body; };
+const std::map<std::string, std::string> &Request::getHeaders(void) const { return _headers; };
 
-std::string Request::getUri() const
-{
-    return _uri;
-};
-
-std::string Request::getVersion() const
-{
-    return _version;
-};
-
-std::string Request::getBody() const
-{
-    return _body;
-};
-std::map<std::string, std::string> Request::getHeaders() const
-{
-    return _headers;
-};
-
-void Request::setMethod(std::string method)
-{
-    _method = method;
-};
-
-void Request::setUri(std::string uri)
-{
-    _uri = uri;
-};
-
-void Request::setVersion(std::string version)
-{
-    _version = version;
-};
-
-void Request::setBody(std::string body)
-{
-    _body = body;
-};
-
-void Request::setHeaders(std::map<std::string, std::string> headers)
-{
-    _headers = headers;
-};
+void Request::setMethod(const std::string &method) { _method = method; };
+void Request::setUri(const std::string &uri) { _uri = uri; };
+void Request::setVersion(const std::string &version) { _version = version; };
+void Request::setBody(const std::string &body) { _body = body; };
+void Request::setHeaders(const std::map<std::string, std::string> &headers) { _headers = headers; };
 
 bool Request::getHeaders(std::string message)
 {
@@ -80,17 +43,17 @@ bool Request::getHeaders(std::string message)
         newline = message.substr(0, pos);
         header = newline.substr(0, newline.find_first_of(":"));
         if (header.find(" ") != std::string::npos)
-            return 1;
+            return true;
         //value = deleteSpaces(newline.substr(newline.find_first_of(":") + 1));
         value = newline.substr(newline.find_first_of(":") + 1);
         _headers[header] = value;
         message = message.substr(pos + 2);
         pos = message.find("\r\n");
     }
-    return 0;
+    return false;
 }
 
-Response Request::parse(std::string message)
+Response Request::parse(const std::string &message)
 {
     size_t pos1, pos2;
 
@@ -182,7 +145,7 @@ Response Request::execGet()
     {
         path = it->getRoot() + _uri;
         if (stat(path.c_str(), &buffer))
-            paths[it->getPath()] = path;    
+            paths[it->getPath()] = path;
     }
     //find path with max lenght and ??
 
@@ -206,11 +169,12 @@ Response Request::execGet()
     return resp;
 };
 
-std::string myToLower(std::string str)
+std::string myToLower(const std::string &str)
 {
+    std::string res;
     for (size_t i = 0; i < str.size(); i++)
-        str[i] = std::tolower(str[i]);
-    return str;
+        res[i] = std::tolower(str[i]);
+    return res;
 };
 
 Response Request::execPost()
@@ -222,8 +186,6 @@ Response Request::execPost()
     {
         //std::transform(type.begin(), type.end(), type.begin(), [](unsigned char c) -> { return std::tolower(c); });
         type = myToLower(type);
-
-
     }
     else if ((point = _uri.find_last_of(".")) != std::string::npos) // how to check cgi
     {
@@ -289,15 +251,9 @@ std::string Request::getRequest()
     return request;
 };
 
-void Request::setConfig(ServerCfg config)
-{
-    _conf = config;
-};
+void Request::setConfig(ServerCfg config) { _conf = config; };
 
-ServerCfg Request::getConfig() const
-{
-    return _conf;
-};
+const ServerCfg &Request::getConfig(void) const { return _conf; };
 
 std::ostream& operator<<(std::ostream &out, Request request)
 {

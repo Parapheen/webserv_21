@@ -29,6 +29,7 @@ class ServersManager : public Manager<TCPServer> {
         void                                removeSocket(const int &fd);
 
         void                                addServer(const std::string &serverName, TCPServer *server);
+        void                                init(const std::vector<ServerCfg> &servers);
 };
 
 std::ostream &operator<<(std::ostream &o, ServersManager &instance);

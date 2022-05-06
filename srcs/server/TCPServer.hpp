@@ -10,7 +10,6 @@
 #include <fcntl.h>
 #include <arpa/inet.h>
 #include "../parser/ServerCfg.hpp"
-#include "ClientsManager.hpp"
 
 class TCPServer {
     private:
@@ -38,6 +37,7 @@ class TCPServer {
         // getters
         const int       &getSocketFd(void) const;
         const sockaddr  &getSocketAddr(void) const;
+        const ServerCfg &getServerConfig(void) const;
 };
 
 std::ostream &operator<<(std::ostream &o, TCPServer &instance);

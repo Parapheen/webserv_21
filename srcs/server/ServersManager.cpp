@@ -17,9 +17,7 @@ const std::map<int, TCPServer *>    &ServersManager::getSockets(void) const {
     return this->getAll();
 }
 
-const TCPServer     *ServersManager::getServerBySocket(const int &fd) const {
-    return this->getOne(fd);
-}
+TCPServer     *ServersManager::getServerBySocket(const int &fd) { return this->getOne(fd); }
 
 void    ServersManager::removeSocket(const int &fd) {
     return this->removeOne(fd);

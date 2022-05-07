@@ -14,7 +14,7 @@
 
 class ClientsManager : public Manager<Client> {
     private:
-        std::map<int, const TCPServer *>  _client_server_map;
+        std::map<int, TCPServer *>  _client_server_map;
     public:
         ClientsManager(const EventLoop &eventLoop);
         ~ClientsManager(void);
@@ -26,10 +26,13 @@ class ClientsManager : public Manager<Client> {
 
         // wrappers over manager methods
         const std::map<int, Client *>       &getClients(void) const;
-        const Client                        *getClient(const int &fd);
-        const TCPServer                     *getServerByClientFd(const int &fd);
-        void                                addClient(const TCPServer *server, Client *client);
+        Client                              *getClient(const int &fd);
+        TCPServer                           *getServerByClientFd(const int &fd);
+        const Response                      &getResponseByClientFd(const int &fd);
+        void                                addClient(TCPServer *server, Client *client);
+        void                                writeToClient(const int &fd);
         void                                removeClient(const int &fd);
+        void                                setResponseToClient(const int &fd, const Response &response);
 };
 
 std::ostream &operator<<(std::ostream &o, ClientsManager &instance);

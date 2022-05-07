@@ -25,7 +25,7 @@ class ServersManager : public Manager<TCPServer> {
         // human readable wrappers over Manager methods
         void                                addSocket(const int &fd, TCPServer *server);
         const std::map<int, TCPServer *>    &getSockets(void) const;
-        const TCPServer                     *getServerBySocket(const int &fd) const;
+        TCPServer                           *getServerBySocket(const int &fd);
         void                                removeSocket(const int &fd);
 
         void                                addServer(const std::string &serverName, TCPServer *server);

@@ -13,7 +13,7 @@ class Manager {
 
         void                        addOne(const int &key, T *el);
         const std::map<int, T *>    &getAll(void) const;
-        const T                     *getOne(const int &key) const;
+        T                           *getOne(const int &key);
         void                        removeOne(const int &key);
     
     public:
@@ -52,7 +52,7 @@ const std::map<int, T *>    &Manager<T>::getAll(void) const {
 }
 
 template <class T>
-const T *Manager<T>::getOne(const int &key) const {
+T *Manager<T>::getOne(const int &key) {
     try {
         return this->_elements.at(key);
     }

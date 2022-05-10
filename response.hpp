@@ -28,20 +28,21 @@ public:
     void initStatusMessages();
     void initHeaders();
 
-    void setHeaders(std::string lang, std::string uri = "\\"); //-
+    //void setHeaders(std::string lang, std::string uri = "\\"); //-
+    void setHeaders(std::string uri);
     
-    void setDate(); //+
-    void setContentType(std::string file); //+
-    void setContentLenght(); //+
-    void setContentLocation(std::string const& uri); //+
-    void setContentLanguage(std::string const& lang = "en"); //+
+    void setDate();
+    void setContentType(std::string file);
+    void setContentLenght();
+    void setContentLocation(std::string const& uri);
+    void setContentLanguage(std::string const& lang = "en");
     void setContentEncoding(); // ?????????
-    void setAllow(); //+
-    void setLastModified(std::string file); //+
+    void setAllow();
+    void setLastModified(std::string file);
     void setAcceptLanguage();
     void setAcceptEncoding();
     void setLocation(std::string uri); //+ Location используется для перенаправления и содержит новый URL адрес
-    void setRetryAfter(); //+
+    void setRetryAfter();
     void setTransferEncoding(); //- chunked ??? 
     void setWwwAuthenticate(); //-
     void setVery(); // ????????

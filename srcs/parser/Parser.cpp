@@ -8,8 +8,7 @@ Parser  &Parser::operator=(const Parser &rhs) {
     if (this != &rhs) {
         this->_filePath = rhs._filePath;
         this->_lexer = rhs._lexer;
-        for (size_t i = 0; i < rhs.getServers().size(); i++)
-            this->_servers[i] = rhs.getServers()[i];
+        this->_servers = rhs._servers;
     }
     return *this;
 }

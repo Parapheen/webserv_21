@@ -3,8 +3,7 @@
 Webserver::Webserver(void) : _serversManager(new ServersManager(this->_eventLoop)),
     _clientsManager(new ClientsManager(this->_eventLoop)) { return ; }
 
-Webserver::Webserver(const Webserver &instance) : _serversManager(instance._serversManager), _clientsManager(instance._clientsManager), 
-    _eventLoop(instance._eventLoop) {
+Webserver::Webserver(const Webserver &instance) : _eventLoop(instance._eventLoop), _serversManager(instance._serversManager), _clientsManager(instance._clientsManager) {
     return ;
 }
 

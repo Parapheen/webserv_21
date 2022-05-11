@@ -1,6 +1,7 @@
 #include "ServerCfg.hpp"
 
-ServerCfg::ServerCfg(void) : _port(8000), _name(""), _root("/") { return; }
+ServerCfg::ServerCfg(void) : _port(8000), _name(""), _root("/"), _errorPages(std::map<int, std::string>()),
+    _locations(std::vector<LocationCfg>()) { return; }
 
 ServerCfg::ServerCfg(const ServerCfg &instance) : _port(instance.getPort()), _name(instance.getName()),
     _root(instance.getRoot()), _errorPages(instance.getErrorPages()), _locations(instance.getLocations()) {
@@ -13,8 +14,7 @@ ServerCfg   &ServerCfg::operator=(const ServerCfg &rhs) {
     this->_name = rhs._name;
     this->_root = rhs._root;
     this->_errorPages = rhs._errorPages;
-    for (size_t i = 0; i < rhs.getLocations().size(); i++)
-        this->_locations[i] = rhs._locations[i];
+    this->_locations = rhs.getLocations();
     return *this;
 }
 

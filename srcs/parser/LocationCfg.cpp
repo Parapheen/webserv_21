@@ -15,17 +15,17 @@ LocationCfg::LocationCfg(const LocationCfg &instance) : _root(instance.getRoot()
 }
 
 LocationCfg   &LocationCfg::operator=(const LocationCfg &rhs) {
-    if (this == &rhs) return *this;
-    this->_autoIndex = rhs._autoIndex;
-    this->_cgiExpantion = rhs._cgiExpantion;
-    this->_clientBodyBufferSize = rhs._clientBodyBufferSize;
-    for (size_t i = 0; i < rhs.getIndexes().size(); i++)
-        this->_index[i] = rhs._index[i];
-    this->_method = rhs._method;
-    this->_path = rhs._path;
-    this->_redirectionCode = rhs._redirectionCode;
-    this->_redirectionUrl = rhs._redirectionUrl;
-    this->_root = rhs._root;
+    if (this != &rhs) {
+        this->_autoIndex = rhs._autoIndex;
+        this->_cgiExpantion = rhs._cgiExpantion;
+        this->_clientBodyBufferSize = rhs._clientBodyBufferSize;
+        this->_index = rhs._index;
+        this->_method = rhs._method;
+        this->_path = rhs._path;
+        this->_redirectionCode = rhs._redirectionCode;
+        this->_redirectionUrl = rhs._redirectionUrl;
+        this->_root = rhs._root;
+    }
     return *this;
 }
 

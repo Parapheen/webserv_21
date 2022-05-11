@@ -17,15 +17,11 @@ Response::Response(Response const& copy):
 
 Response::Response(std::string const &statusCode, const std::string &uri)
 {
-    std::cout << "STATUS CODE\n";
     initHeaders();
     initStatusMessages();
-    //std::cout << "st. code: " << statusCode << std::endl;
     _version = "HTTP/1.1";
     _statusCode = statusCode;
-    std::cout << "before headers\n";
     setHeaders(uri);
-    //create response depends on status code, maybe same response.error(statusCode) ?? 
 };
 
 Response& Response::operator=(Response const& source)
@@ -49,37 +45,46 @@ void Response::initStatusMessages()
     _statusMessages["100"] = "Continue";
     _statusMessages["200"] = "OK";
     _statusMessages["201"] = "Created";
+    _statusMessages["301"] = "Moved Permanently";
+    _statusMessages["302"] = "Found";
+    _statusMessages["303"] = "See Other";
+    _statusMessages["307"] = "Temporary Redirect";
+    _statusMessages["308"] = "Permanent Redirect";
     _statusMessages["400"] = "Bad Request";
-    _statusMessages["401"] = "Unauthorized";
-    _statusMessages["402"] = "Payment Required";
+    _statusMessages["401"] = "Unauthorized"; // ??
+    _statusMessages["402"] = "Payment Required"; // ??
     _statusMessages["403"] = "Forbidden";
     _statusMessages["404"] = "Not Found";
     _statusMessages["405"] = "Method Not Allowed";
+    _statusMessages["413"] = "Payload Too Large";
+    _statusMessages["500"] = "Internal Server Error";
     _statusMessages["505"] = "HTTP Version Not Supported";
 };
 
 void Response::initHeaders()
 {
     _headers["Connection"] = "keep-alive";
-    //_headers["User-Agent"] = "Chrome/96.0.4664.55";
     _headers["Server"] = "Webserv MacOS";
 };
 
+<<<<<<< HEAD:srcs/http/Response.cpp
 void Response::setHeaders(const std::string &lang, const std::string &uri)
+=======
+//void Response::setHeaders(std::string lang, std::string uri)
+void Response::setHeaders(std::string uri)
+>>>>>>> origin/helena:response.cpp
 {
-    setDate(); // +
-    //setContentType(file);
-    setContentType(uri); // +
-    setContentLenght(); // +
-    setContentLocation(uri); // is it correct? 
-    setContentLanguage(lang); // +
-    setAllow();  // +
-    //setLastModified(file);
-    setLastModified(uri); // +
-    setLocation(uri);
-    setRetryAfter(); // +
-    setTransferEncoding(); // ????
-    setWwwAuthenticate(); // +
+    setDate();
+    setContentType(uri);
+    setContentLenght();
+    if (_statusCode[0] == '3')
+        setLocation(uri);
+    else
+        setContentLocation(uri); // is it correct? 
+    setLastModified(uri);
+    setRetryAfter();
+    // setTransferEncoding(); // ????
+    // setWwwAuthenticate(); // ???? 
 };
 
 void Response::setDate()
@@ -112,10 +117,7 @@ void Response::setContentType(const std::string &file)
         else if (exp == "png")
             _headers["Content-Type"] = "image/png";
         else
-            _headers["Content-Type"] = "text/plain"; //what default value set?
-        //what else ??
-
-        //should set the charset??
+            _headers["Content-Type"] = "text/plain";
     }
 };
 
@@ -123,12 +125,12 @@ void Response::setContentLenght()
 {
     std::stringstream oss;
     
-    oss << _body.size();
-    _headers["Content-Lenght"] = oss.str();
+    if (_body.size())
+    {
+        oss << _body.size();
+        _headers["Content-Lenght"] = oss.str();
+    }    
 };
-
-// void Response::setContentEncoding()
-// {};
 
 void Response::setContentLocation(std::string const& uri)
 {
@@ -140,12 +142,16 @@ void Response::setContentLanguage(std::string const& lang)
     _headers["Content-Language"] = lang;
 };
 
+<<<<<<< HEAD:srcs/http/Response.cpp
 void Response::setAllow(void)
 {
     _headers["Allow"] = "GET, POST, DELETE";
 };
 
 void Response::setLastModified(const std::string &file)
+=======
+void Response::setLastModified(std::string file)
+>>>>>>> origin/helena:response.cpp
 {
     struct stat buffer;
     char str[100];
@@ -158,6 +164,7 @@ void Response::setLastModified(const std::string &file)
     }
 };
 
+<<<<<<< HEAD:srcs/http/Response.cpp
 // void Response::setAcceptLanguage()
 // {
 
@@ -169,25 +176,30 @@ void Response::setLastModified(const std::string &file)
 // };
 
 void Response::setLocation(const std::string &uri)
+=======
+void Response::setLocation(std::string uri)
+>>>>>>> origin/helena:response.cpp
 {
     if ((_statusCode == "201") || (_statusCode[0] == '3'))
         _headers["Location"] = uri;
-    // what value in other case ??
 };
 
 void Response::setRetryAfter(void)
 {
     if ((_statusCode == "503") || (_statusCode == "429") || (_statusCode == "301"))
         _headers["Retry-After"] = "10";
-    // else
-    //     _headers["Retry-After"] = "0"; // or remove this header ??
 };
 
+<<<<<<< HEAD:srcs/http/Response.cpp
 void Response::setTransferEncoding(void)
 {
 
+=======
+// void Response::setTransferEncoding()
+// {
+>>>>>>> origin/helena:response.cpp
 
-};
+// };
 
 void Response::setWwwAuthenticate(void)
 {
@@ -212,6 +224,20 @@ std::string Response::getResponse(void)
     // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include a message body !!!
     if (!(_statusCode == "204" || _statusCode == "304" || _statusCode[0] == '1'))
         response += ("\r\n" + _body + "\r\n");
+    else if (_statusCode == "404" || _statusCode == "500")
+    {
+        std::fstream fs;
+        std::string str = "";
+        fs.open(_statusCode + ".html");
+        while(!fs.eof())
+        {
+            std::getline(fs, str);
+            _body += str;
+            if (!fs.eof())
+                _body += '\n';
+        }
+        fs.close();
+    }
     return response;
 
 };

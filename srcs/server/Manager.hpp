@@ -17,6 +17,7 @@ class Manager {
         void                        removeOne(const int &key);
     
     public:
+        Manager(void);
         Manager(const EventLoop &eventLoop);
 
         Manager(const Manager &instance);
@@ -25,18 +26,20 @@ class Manager {
 };
 
 template <class T>
+Manager<T>::Manager(void) { return ; }
+
+template <class T>
 Manager<T>::Manager(const EventLoop &eventLoop) : _eventLoop(eventLoop) { return ; }
 
 template <class T>
-Manager<T>::Manager(const Manager &instance) {
-    *this = instance;
-    return;
-}
+Manager<T>::Manager(const Manager &instance) : _elements(instance._elements) { return ; }
 
 template <class T>
 Manager<T> &Manager<T>::operator=(const Manager &rhs) {
-    if (this->getAll() != rhs.getAll())
-        this->_elements = rhs._elements;
+    if (this != &rhs) {
+        for (size_t i = 0; i < rhs._elements.size(); i++)
+            this->_elements[i] = rhs._elements[i];
+    }
     return *this;
 }
 

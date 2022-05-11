@@ -1,91 +1,38 @@
 #include "Request.hpp"
 #include "Autoindex.hpp"
 
-Request::Request(void): _headers(std::map<std::string, std::string>()) {};
+Request::Request(void): _headers(std::map<std::string, std::string>()) { return; };
 
-Request::Request(Request const& copy): _method(copy._method), _uri(copy._uri), _version(copy._version), _headers(copy._headers), _body(copy._body) {};
+Request::Request(Request const &copy): _method(copy._method), _uri(copy._uri), _version(copy._version), _headers(copy._headers), _body(copy._body) { return; };
 
 Request& Request::operator=(Request const& source)
 {
     if (this != &source)
     {
-        _method = source._method;
-        _uri = source._uri;
-        _version = source._version;
-        _headers = source._headers;
-        _body = source._body;
+        this->_method = source._method;
+        this->_uri = source._uri;
+        this->_version = source._version;
+        this->_headers = source._headers;
+        this->_body = source._body;
     }
     return *this;
 };
 
 Request::~Request(void) { return; };
 
-const std::string &Request::getMethod(void) const { return _method; };
-const std::string &Request::getUri(void) const { return _uri; };
-const std::string &Request::getVersion(void) const { return _version; };
-const std::string &Request::getBody(void) const { return _body; };
-const std::map<std::string, std::string> &Request::getHeaders(void) const { return _headers; };
+const std::string                           &Request::getMethod(void) const { return this->_method; };
+const std::string                           &Request::getUri(void) const { return this->_uri; };
+const std::string                           &Request::getVersion(void) const { return this->_version; };
+const std::string                           &Request::getBody(void) const { return this->_body; };
+const std::map<std::string, std::string>    &Request::getHeaders(void) const { return this->_headers; };
+const ServerCfg                             &Request::getConfig() const { return this->_conf; };
 
-void Request::setMethod(const std::string &method) { _method = method; };
-void Request::setUri(const std::string &uri) { _uri = uri; };
-void Request::setVersion(const std::string &version) { _version = version; };
-void Request::setBody(const std::string &body) { _body = body; };
-void Request::setHeaders(const std::map<std::string, std::string> &headers) { _headers = headers; };
-std::string Request::getUri() const
-{
-    return _uri;
-};
-
-std::string Request::getVersion() const
-{
-    return _version;
-};
-
-std::string Request::getBody() const
-{
-    return _body;
-};
-
-std::map<std::string, std::string> Request::getHeaders() const
-{
-    return _headers;
-};
-
-
-ServerCfg Request::getConfig() const
-{
-    return _conf;
-};
-
-void Request::setMethod(std::string method)
-{
-    _method = method;
-};
-
-void Request::setUri(std::string uri)
-{
-    _uri = uri;
-};
-
-void Request::setVersion(std::string version)
-{
-    _version = version;
-};
-
-void Request::setBody(std::string body)
-{
-    _body = body;
-};
-
-void Request::setHeaders(std::map<std::string, std::string> headers)
-{
-    _headers = headers;
-};
-
-void Request::setConfig(ServerCfg const& config)
-{
-    _conf = config;
-};
+void Request::setMethod(const std::string &method) { this->_method = method; };
+void Request::setUri(const std::string &uri) { this->_uri = uri; };
+void Request::setVersion(const std::string &version) { this->_version = version; };
+void Request::setBody(const std::string &body) { this->_body = body; };
+void Request::setHeaders(const std::map<std::string, std::string> &headers) { this->_headers = headers; };
+void Request::setConfig(ServerCfg const& config) { this->_conf = config; };
 
 bool Request::getHeaders(std::string message)
 {
@@ -119,7 +66,7 @@ std::string deleteSpace(std::string str)
     return str.substr(--start, end);
 }
 
-Response Request::parse(std::string message)
+Response Request::parse(const std::string &message)
 {
     size_t pos1, pos2;
 
@@ -189,7 +136,7 @@ Response Request::execute()
 //         params[findParams.substr(0, findParams.find("="))] = findParams.substr(findParams.find("=") + 1);
 // };
 
-void Request::initPort()
+void Request::initPort(void)
 {
     std::string host;
     std::string port;
@@ -201,7 +148,7 @@ void Request::initPort()
         port = hostPost.substr(hostPost.find(":") + 1);
 };
 
-LocationCfg Request::chooseLocation()
+LocationCfg Request::chooseLocation(void)
 {
     LocationCfg location = *(_conf.getLocations().begin());
     size_t maxLen = 0;
@@ -224,7 +171,7 @@ LocationCfg Request::chooseLocation()
     return location;
 };
 
-Response Request::execGet()
+Response Request::execGet(void)
 {
     std::fstream fs;
     Response resp;
@@ -302,7 +249,7 @@ std::string myToLower(const std::string &str)
     return res;
 };
 
-Response Request::execPost()
+Response Request::execPost(void)
 {
     size_t point;
 
@@ -354,7 +301,7 @@ Response Request::execPost()
     return Response("200", _uri);
 };
 
-Response Request::execDelete()
+Response Request::execDelete(void)
 {
     if (_conf.getLocations().empty())
         return Response("500", _uri); //or another error??
@@ -382,7 +329,7 @@ Response Request::execDelete()
     return Response("200", _uri); // return 204, if response without body
 };
 
-std::string Request::getRequest()
+std::string Request::getRequest(void)
 {
     std::string request = "";
     request += (_method + " " + _uri + " " + _version + "\r\n");
@@ -392,10 +339,6 @@ std::string Request::getRequest()
         request += ("\r\n" + _body + "\r\n");
     return request;
 };
-
-void Request::setConfig(ServerCfg config) { _conf = config; };
-
-const ServerCfg &Request::getConfig(void) const { return _conf; };
 
 std::ostream& operator<<(std::ostream &out, Request request)
 {

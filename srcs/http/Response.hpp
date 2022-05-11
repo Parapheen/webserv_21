@@ -5,6 +5,7 @@
 #include <map>
 #include <sstream>
 #include <sys/stat.h>
+#include <fstream>
 
 class Response
 {
@@ -28,20 +29,19 @@ public:
     void initStatusMessages(void);
     void initHeaders(void);
 
-    void setHeaders(const std::string &lang, const std::string &uri = "\\"); //-
-    
-    void setDate(void); //+
-    void setContentType(const std::string &file); //+
-    void setContentLenght(void); //+
-    void setContentLocation(const std::string &uri); //+
-    void setContentLanguage(const std::string &lang = "en"); //+
+    void setHeaders(const std::string &uri); //-
+    void setDate(void);
+    void setContentType(const std::string &file);
+    void setContentLenght(void);
+    void setContentLocation(const std::string &uri);
+    void setContentLanguage(const std::string &lang = "en");
     void setContentEncoding(void); // ?????????
-    void setAllow(void); //+
-    void setLastModified(const std::string &file); //+
+    void setAllow(void);
+    void setLastModified(const std::string &file);
     void setAcceptLanguage(void);
     void setAcceptEncoding(void);
     void setLocation(const std::string &uri); //+ Location используется для перенаправления и содержит новый URL адрес
-    void setRetryAfter(void); //+
+    void setRetryAfter(void);
     void setTransferEncoding(void); //- chunked ??? 
     void setWwwAuthenticate(void); //-
     void setVery(void); // ????????

@@ -1,7 +1,7 @@
 #include "Autoindex.hpp"
 
-std::string Autoindex::createPage(std::string path, std::string host, std::string port)
-{
+std::string Autoindex::createPage(const std::string &path, 
+                        const std::string &host, const std::string &port) {
     DIR *dpdf;
     struct dirent *epdf;
     std::string page = "<!DOCTYPE html>\

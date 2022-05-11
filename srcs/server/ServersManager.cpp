@@ -1,7 +1,18 @@
 #include "ServersManager.hpp"
 
+ServersManager::ServersManager(void) { return ; }
+
 ServersManager::ServersManager(const EventLoop &eventLoop) : Manager<TCPServer>(eventLoop) {
     return;
+}
+
+ServersManager::ServersManager(const ServersManager &instance) : _servers(instance._servers) { return; }
+
+ServersManager &ServersManager::operator=(const ServersManager &rhs) {
+    if (this != &rhs) {
+        this->_servers = rhs._servers;
+    }
+    return *this;
 }
 
 const std::map<std::string, TCPServer *> &ServersManager::getServers(void) const {

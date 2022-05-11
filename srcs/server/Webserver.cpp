@@ -3,14 +3,17 @@
 Webserver::Webserver(void) : _serversManager(new ServersManager(this->_eventLoop)),
     _clientsManager(new ClientsManager(this->_eventLoop)) { return ; }
 
-Webserver::Webserver(const Webserver &instance) {
-    *this = instance;
+Webserver::Webserver(const Webserver &instance) : _serversManager(instance._serversManager), _clientsManager(instance._clientsManager), 
+    _eventLoop(instance._eventLoop) {
     return ;
 }
 
 Webserver &Webserver::operator=(const Webserver &rhs) {
-    if (this->_eventLoop.getEventLoop() != rhs._eventLoop.getEventLoop())
+    if (this != &rhs) {
         this->_eventLoop = rhs._eventLoop;
+        this->_serversManager = rhs._serversManager;
+        this->_clientsManager = rhs._clientsManager;
+    }
     return *this;
 }
 

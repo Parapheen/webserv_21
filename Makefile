@@ -1,6 +1,5 @@
-CC = c++
-FLAGS = -std=c++98 -Wall -Wextra -Werror
-SRCS = webserver.cpp
+CC = clang++
+FLAGS = -std=c++98 -Wall -Wextra -Werror -g
 
 OBJ = $(SRCS:.cpp=.o)
 RM = rm -f
@@ -10,7 +9,8 @@ SRCS 			=		srcs/main.cpp srcs/server/TCPServer.cpp srcs/server/ClientsManager.cp
 						srcs/server/ServersManager.cpp srcs/server/Client.cpp \
 						srcs/server/Webserver.cpp srcs/server/EventLoop.cpp \
 						srcs/parser/Lexer.cpp srcs/parser/Parser.cpp srcs/parser/ServerCfg.cpp \
-						srcs/parser/LocationCfg.cpp srcs/http/Request.cpp srcs/http/Response.cpp
+						srcs/parser/LocationCfg.cpp srcs/http/Request.cpp srcs/http/Response.cpp \
+						srcs/http/Autoindex.cpp
 
 %.o: %.cpp
 	$(CC) $(FLAGS) -c $< -o $@
@@ -24,12 +24,8 @@ clean:
 	$(RM) $(OBJ) $(OBJ_FT) $(OBJ_STD)
 
 fclean:
-	$(RM) $(NAME) $(NAME_FT) $(NAME_STD) $(OBJ) $(OBJ_FT) $(OBJ_STD)
+	$(RM) $(NAME) $(OBJ) $(OBJ_FT) $(OBJ_STD)
 
 re: fclean all
 
-ft: $(NAME_FT)
-
-std: $(NAME_STD)
-
-
+.PHONY: clean fclean all re

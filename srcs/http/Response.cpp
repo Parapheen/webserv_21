@@ -67,12 +67,8 @@ void Response::initHeaders()
     _headers["Server"] = "Webserv MacOS";
 };
 
-<<<<<<< HEAD:srcs/http/Response.cpp
-void Response::setHeaders(const std::string &lang, const std::string &uri)
-=======
 //void Response::setHeaders(std::string lang, std::string uri)
-void Response::setHeaders(std::string uri)
->>>>>>> origin/helena:response.cpp
+void Response::setHeaders(const std::string &uri)
 {
     setDate();
     setContentType(uri);
@@ -142,16 +138,7 @@ void Response::setContentLanguage(std::string const& lang)
     _headers["Content-Language"] = lang;
 };
 
-<<<<<<< HEAD:srcs/http/Response.cpp
-void Response::setAllow(void)
-{
-    _headers["Allow"] = "GET, POST, DELETE";
-};
-
 void Response::setLastModified(const std::string &file)
-=======
-void Response::setLastModified(std::string file)
->>>>>>> origin/helena:response.cpp
 {
     struct stat buffer;
     char str[100];
@@ -164,21 +151,7 @@ void Response::setLastModified(std::string file)
     }
 };
 
-<<<<<<< HEAD:srcs/http/Response.cpp
-// void Response::setAcceptLanguage()
-// {
-
-// };
-
-// void Response::setAcceptEncoding()
-// {
-    
-// };
-
 void Response::setLocation(const std::string &uri)
-=======
-void Response::setLocation(std::string uri)
->>>>>>> origin/helena:response.cpp
 {
     if ((_statusCode == "201") || (_statusCode[0] == '3'))
         _headers["Location"] = uri;
@@ -190,14 +163,8 @@ void Response::setRetryAfter(void)
         _headers["Retry-After"] = "10";
 };
 
-<<<<<<< HEAD:srcs/http/Response.cpp
-void Response::setTransferEncoding(void)
-{
-
-=======
 // void Response::setTransferEncoding()
 // {
->>>>>>> origin/helena:response.cpp
 
 // };
 

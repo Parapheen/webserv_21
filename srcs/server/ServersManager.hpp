@@ -13,6 +13,7 @@ class ServersManager : public Manager<TCPServer> {
         std::map<std::string, TCPServer *>    _servers; // name: server instance
 
     public:
+        ServersManager(void);
         ServersManager(const EventLoop &eventLoop);
         ServersManager(const ServersManager &instance);
 

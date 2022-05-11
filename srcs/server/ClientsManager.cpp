@@ -12,6 +12,12 @@ ClientsManager::~ClientsManager(void) {
 }
 
 ClientsManager::ClientsManager(const ClientsManager &instance) : Manager(instance._eventLoop) { return; }
+ClientsManager &ClientsManager::operator=(const ClientsManager &rhs) {
+    if (this != &rhs) {
+        this->_client_server_map = rhs._client_server_map; // iterate?
+    }
+    return *this;
+}
 
 const std::map<int, Client *> &ClientsManager::getClients(void) const { return this->getAll(); }
 

@@ -4,16 +4,17 @@ Client::Client(const int &fd) : _socketfd(fd) { return; }
 
 Client::~Client(void) { return; }
 
-Client::Client(const Client &instance) {
-    this->_socketfd = instance._socketfd;
-    this->_currentRequest = instance._currentRequest;
-    this->_currentResponse = instance._currentResponse;
+Client::Client(const Client &instance) : _socketfd(instance.getSocketFd()), _currentRequest(instance._currentRequest),
+    _currentResponse(instance._currentResponse) {
     return ;
 }
 
 Client &Client::operator=(const Client &rhs) {
-    if (this->getSocketFd() != rhs.getSocketFd())
+    if (this != &rhs) {
         this->_socketfd = rhs._socketfd;
+        this->_currentRequest = rhs._currentRequest;
+        this->_currentResponse = rhs._currentResponse;
+    }
     return *this;
 }
 

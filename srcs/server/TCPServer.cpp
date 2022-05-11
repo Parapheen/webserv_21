@@ -1,7 +1,7 @@
 #include "TCPServer.hpp"
 
-TCPServer::TCPServer(const TCPServer &instance) {
-    *this = instance;
+TCPServer::TCPServer(const TCPServer &instance) : _socketfd(instance.getSocketFd()), _sockaddr(instance._sockaddr),
+    _eventLoop(instance._eventLoop), _config(instance._config), _numberOfConnections(instance._numberOfConnections) {
     return;
 }
 
@@ -16,8 +16,13 @@ TCPServer::TCPServer(const int &eventLoop, const ServerCfg &config) : _eventLoop
 }
 
 TCPServer &TCPServer::operator=(const TCPServer &rhs) {
-    if (this->getSocketFd() != rhs.getSocketFd())
+    if (this != &rhs) {
         this->_socketfd = rhs._socketfd;
+        this->_sockaddr = rhs._sockaddr;
+        this->_eventLoop = rhs._eventLoop;
+        this->_config = rhs._config;
+        this->_numberOfConnections = rhs._numberOfConnections;
+    }
     return *this;
 }
 

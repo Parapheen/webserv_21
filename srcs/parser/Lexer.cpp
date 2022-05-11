@@ -2,18 +2,17 @@
 
 Lexer::Lexer(void) { return; }
 
-Lexer::Lexer(const Lexer &instance) {
-    *this = instance;
-}
+Lexer::Lexer(const Lexer &instance) : _tokens(instance._tokens) { return; }
 
 Lexer &Lexer::operator=(const Lexer &rhs) {
-    this->_tokens = rhs._tokens;
+    if (this != &rhs) {
+        for (size_t i = 0; i < rhs._tokens.size(); i++)
+            this->_tokens[i] = rhs._tokens[i];
+    }
     return *this;
 }
 
-std::vector< std::pair<std::string, TOKENS> >   &Lexer::getTokens(void) {
-    return this->_tokens;
-}
+std::vector< std::pair<std::string, TOKENS> >   &Lexer::getTokens(void) { return this->_tokens; }
 
 std::string Lexer::_trim(const std::string &s) const {
     size_t first = s.find_first_not_of(' ');
@@ -45,7 +44,6 @@ void    Lexer::handleLine(const std::string &line) {
     std::vector<std::string>::iterator  it = splitted.begin();
 
     while (it != splitted.end()) {
-        // std::cout << *it << " ";
         if (*it == "{")
             this->_tokens.push_back(std::pair<std::string, TOKENS>(*it, OPEN_BRACKET));
         else if (*it == "}")

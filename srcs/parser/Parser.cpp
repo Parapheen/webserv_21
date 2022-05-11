@@ -1,14 +1,16 @@
 #include "Parser.hpp"
 
-Parser::Parser(void) { return; }
+Parser::Parser(void) : _filePath("./configs/example_1.conf") { return; }
 
-Parser::Parser(const Parser &instance) {
-    *this = instance;
-    return;
-}
+Parser::Parser(const Parser &instance) : _filePath(instance._filePath), _lexer(instance._lexer), _servers(instance._servers) { return; }
 
 Parser  &Parser::operator=(const Parser &rhs) {
-    (void) rhs;
+    if (this != &rhs) {
+        this->_filePath = rhs._filePath;
+        this->_lexer = rhs._lexer;
+        for (size_t i = 0; i < rhs.getServers().size(); i++)
+            this->_servers[i] = rhs.getServers()[i];
+    }
     return *this;
 }
 
@@ -67,6 +69,29 @@ LocationCfg    Parser::_parseLocation(size_t *tokenPos, const std::vector<TokenP
                     ++(*tokenPos);
                     location.setMethod(tokens[*tokenPos].first);
                 }
+                else if (tokens[*tokenPos].first == "autoindex") {
+                    ++(*tokenPos);
+                    bool    v;
+                    if (tokens[*tokenPos].first == "on")
+                        v = true;
+                    else if (tokens[*tokenPos].first == "off")
+                        v = false;
+                    else {
+                        std::ostringstream errMsg;
+                        errMsg << "Parser error\nautoindex is either 'on' or 'off'";
+                        throw std::runtime_error(errMsg.str());
+                    }
+                    location.setAutoIndex(v);
+                }
+                else if (tokens[*tokenPos].first == "client_body_buffer_size") {
+                    ++(*tokenPos);
+                    if (!this->_isNumber(tokens[*tokenPos].first)) {
+                        std::ostringstream errMsg;
+                        errMsg << "Parser error\nclient_body_buffer_size should be a valid positive number";
+                        throw std::runtime_error(errMsg.str());
+                    }
+                    location.setClientBodyBufferSize(std::atol(tokens[*tokenPos].first.c_str()));
+                }
                 else if (tokens[*tokenPos].first == "root") {
                     ++(*tokenPos);
                     location.setRoot(tokens[*tokenPos].first);
@@ -113,24 +138,6 @@ void    Parser::_parseServer(size_t *tokenPos, const std::vector<TokenPair> &tok
                 ++(*tokenPos);
                 newServer.setRoot(tokens[*tokenPos].first);
             }
-            else if (tokens[*tokenPos].first == "autoindex") {
-                ++(*tokenPos);
-                bool    v;
-                if (tokens[*tokenPos].first == "on")
-                    v = true;
-                else if (tokens[*tokenPos].first == "off")
-                    v = false;
-                newServer.setAutoIndex(v);
-            }
-            else if (tokens[*tokenPos].first == "client_body_buffer_size") {
-                ++(*tokenPos);
-                if (!this->_isNumber(tokens[*tokenPos].first)) {
-                    std::ostringstream errMsg;
-                    errMsg << "Parser error\nclient_body_buffer_size should be a valid positive number";
-                    throw std::runtime_error(errMsg.str());
-                }
-                newServer.setBodyBufferSize(std::atol(tokens[*tokenPos].first.c_str()));
-            }
             else if (tokens[*tokenPos].first == "error_page") {
                 ++(*tokenPos);
                 std::pair<int, std::string> errorPage = this->_parseErrorPage(tokenPos, tokens);
@@ -154,7 +161,7 @@ void    Parser::_parseServer(size_t *tokenPos, const std::vector<TokenPair> &tok
         }
         ++(*tokenPos);
     }
-    std::cout << newServer << std::endl;
+    std::cout << "---SERVER---\n" << newServer << std::endl;
     this->_addServer(newServer);
 }
 
@@ -174,6 +181,4 @@ void    Parser::parse(const std::string &filePath) {
 
 const   std::vector<ServerCfg>  Parser::getServers(void) const { return this->_servers;}
 
-Parser::~Parser(void) {
-    return;
-}
+Parser::~Parser(void) { return; }

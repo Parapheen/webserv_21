@@ -56,15 +56,15 @@ bool Request::getHeaders(std::string message)
     return false;
 }
 
-std::string deleteSpace(std::string str)
-{
-    size_t start = 0;
-    size_t end = str.size() - 1;
+// std::string deleteSpace(std::string str)
+// {
+//     size_t start = 0;
+//     size_t end = str.size() - 1;
     
-    while (str[start++] == ' ');
-    while (str[end++] == ' ');
-    return str.substr(--start, end);
-}
+//     while (str[start++] == ' ');
+//     while (str[end++] == ' ');
+//     return str.substr(--start, end);
+// }
 
 Response Request::parse(const std::string &message)
 {
@@ -92,7 +92,6 @@ Response Request::parse(const std::string &message)
             return Response("400", _uri);
         else
             getHeaders(message.substr(message.find("\r\n") + 2));
-            
     }
     else
     {
@@ -181,9 +180,9 @@ Response Request::execGet(void)
 
     //parseUri();
     if (_conf.getLocations().empty())
-        return Response("500", _uri); //or another error??
+        return Response("500", _uri); //or another error?? parser error
     LocationCfg location = chooseLocation();
-    if (location.getMethod() != GET)
+    if (location.getMethod() != GET) 
         return Response("405", _uri);
     if (location.getRedirectionCode() != "")
         return Response(location.getRedirectionCode(), location.getRedirectionUrl());
@@ -227,7 +226,7 @@ Response Request::execGet(void)
 
     fs.open(_uri);
     if (!fs.good())
-        return Response("500", _uri); 
+        return Response("500", _uri);
     while(!fs.eof())
     {
         std::getline(fs, strh);

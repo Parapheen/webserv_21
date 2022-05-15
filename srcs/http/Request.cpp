@@ -24,6 +24,11 @@ const std::string                           &Request::getMethod(void) const { re
 const std::string                           &Request::getUri(void) const { return this->_uri; };
 const std::string                           &Request::getVersion(void) const { return this->_version; };
 const std::string                           &Request::getBody(void) const { return this->_body; };
+const std::string                           &Request::getRoot(const LocationCfg &location) const {
+    if (location.getRoot() != "")
+        return location.getRoot();
+    return this->_conf.getRoot();
+};
 const std::map<std::string, std::string>    &Request::getHeaders(void) const { return this->_headers; };
 const ServerCfg                             &Request::getConfig() const { return this->_conf; };
 
@@ -165,7 +170,7 @@ LocationCfg Request::chooseLocation(void)
             if (it->getPath() == "/" && _uri == "/")
                 _absPath = "." + _uri;
             else
-                _absPath = "./" + it->getRoot() + _uri;
+                _absPath = "./" + this->getRoot(*it) + _uri.substr(1, _uri.size());
         }
         if (_absPath.size() > maxLen)
         {
@@ -192,7 +197,7 @@ Response Request::execGet(void)
         {
             Autoindex autoindex;
             
-            std::string page = autoindex.createPage(_currentLocation.getRoot() + _uri, _uri);
+            std::string page = autoindex.createPage(this->getRoot(this->_currentLocation) + _uri, _uri);
             if (page == "")
                 return Response("500", _uri);
             _body = page;
@@ -203,7 +208,7 @@ Response Request::execGet(void)
         else
         {
             std::string index = _currentLocation.getIndex();
-            std::string targetFile = "./" + _currentLocation.getRoot() + index;
+            std::string targetFile = "./" + this->getRoot(this->_currentLocation) + index;
             fileStream.open(targetFile);
             if (!fileStream.is_open())
                 return Response("404", _uri);

@@ -1,7 +1,7 @@
 #include "LocationCfg.hpp"
 
 LocationCfg::LocationCfg(void) :
-    _root("/"),
+    _root("www/"),
     _path("."),
     _methods(std::vector<METHOD>(GET)),
     _autoIndex(false),

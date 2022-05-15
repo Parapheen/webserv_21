@@ -96,7 +96,7 @@ LocationCfg    Parser::_parseLocation(size_t *tokenPos, const std::vector<TokenP
                     if (rootStr[rootStr.size() - 1] != '/') {
                         this->_throwError("Root must be a directory and end with /");
                     }
-                    location.setRoot(rootStr.substr(0, rootStr.size() - 1));
+                    location.setRoot(rootStr);
                 }
                 else if (tokens[*tokenPos].first == "index") {
                     ++(*tokenPos);
@@ -164,7 +164,7 @@ void    Parser::_parseServer(size_t *tokenPos, const std::vector<TokenPair> &tok
                 if (rootStr[rootStr.size() - 1] != '/') {
                     this->_throwError("Root must be a directory and end with /");
                 }
-                newServer.setRoot(rootStr.substr(0, rootStr.size() - 1));
+                newServer.setRoot(rootStr);
             }
             else if (tokens[*tokenPos].first == "error_page") {
                 ++(*tokenPos);

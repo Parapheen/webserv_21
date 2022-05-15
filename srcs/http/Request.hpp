@@ -39,6 +39,7 @@ public:
     const std::string                           &getUri(void) const;
     const std::string                           &getVersion(void) const;
     const std::string                           &getBody(void) const;
+    const std::string                           &getRoot(const LocationCfg &location) const;
     const std::map<std::string, std::string>    &getHeaders(void) const;
     const ServerCfg                             &getConfig(void) const;
     bool                                        getHeaders(std::string message);

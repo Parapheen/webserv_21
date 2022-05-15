@@ -71,6 +71,14 @@ void                LocationCfg::setRedirectionUrl(const std::string &url) { thi
 void                LocationCfg::setUploadDir(const std::string &uploadDir) { this->_uploadDir = uploadDir; };
 
 
+bool          LocationCfg::methodExists(const METHOD &method) {
+    for (std::vector<METHOD>::const_iterator it = this->getMethods().begin(); it != this->getMethods().end(); it++) {
+        if (*it == method)
+            return true;
+    }
+    return false;
+}
+
 LocationCfg::~LocationCfg(void) { return; }
 
 std::ostream    &operator<<(std::ostream &o, LocationCfg &instance) {

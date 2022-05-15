@@ -3,6 +3,7 @@
 #include "Response.hpp"
 #include <string>
 #include <map>
+#include <algorithm>
 #include <fstream>
 #include <cstdio>
 #include "../parser/ServerCfg.hpp"
@@ -16,7 +17,6 @@ class Request
 private:
     std::string                         _method;
     std::string                         _uri;
-    std::string                         _path;
     std::string                         _absPath;
     std::string                         _version;
     std::map<std::string, std::string>  _headers;
@@ -26,6 +26,8 @@ private:
     std::string                         _port;
 
     ServerCfg                           _conf;
+    LocationCfg                         _currentLocation;
+    bool    _isDirectory(const char *path);
 
 public:
     Request(void);
@@ -56,6 +58,7 @@ public:
     Response execPost(void);
     Response execDelete(void);
 
+    std::string parseFirstLine(std::string firstLine);
     LocationCfg chooseLocation(void);
     //void printRequest(Request req);
     // bool checkRediretion(LocationCfg const& location);

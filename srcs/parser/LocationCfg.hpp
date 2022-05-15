@@ -36,7 +36,6 @@ class LocationCfg {
         const std::string               &getRoot(void) const;
         const std::string               &getPath(void) const;
         const std::vector<METHOD>       &getMethods(void) const;
-        const bool                      &methodExists(const METHOD &method) const;
         const bool                      &getAutoIndex(void) const;
         const std::string               &getIndex(void) const;
         const long long                 &getClientBodyBufferSize(void) const;
@@ -45,6 +44,8 @@ class LocationCfg {
         const std::string               &getRedirectionCode(void) const;
         const std::string               &getRedirectionUrl(void) const;
         const std::string               &getUploadDir(void) const;
+        
+        bool                            methodExists(const METHOD &method);
 
         void                            setRoot(const std::string &root);
         void                            setPath(const std::string &path);

@@ -72,7 +72,7 @@ void Response::setHeaders(const std::string &uri)
 {
     setDate();
     setContentType(uri);
-    setContentLenght();
+    setContentLength();
     if (_statusCode[0] == '3')
         setLocation(uri);
     else
@@ -117,7 +117,7 @@ void Response::setContentType(const std::string &file)
     }
 };
 
-void Response::setContentLenght()
+void Response::setContentLength()
 {
     std::stringstream oss;
     
@@ -188,23 +188,22 @@ std::string Response::getResponse(void)
     for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); it++)
         response += (it->first + ": " + it->second + "\r\n");
     
-    // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include a message body !!!
-    if (!(_statusCode == "204" || _statusCode == "304" || _statusCode[0] == '1'))
-        response += ("\r\n" + _body + "\r\n");
-    else if (_statusCode == "404" || _statusCode == "500")
+    if (_statusCode == "404" || _statusCode == "500")
     {
-        std::fstream fs;
-        std::string str = "";
-        fs.open(_statusCode + ".html");
-        while(!fs.eof())
-        {
-            std::getline(fs, str);
-            _body += str;
-            if (!fs.eof())
-                _body += '\n';
-        }
-        fs.close();
+        std::ifstream fileStream;
+        std::string fileContent;
+
+        fileStream.open("./www/error_pages/" + _statusCode + ".html");
+
+        while(getline(fileStream, fileContent))
+            _body += fileContent;
+        _body += '\n';
+        fileStream.close();
+        response += ("\r\n" + _body + "\r\n");
     }
+    // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include a message body !!!
+    else if (!(_statusCode == "204" || _statusCode == "304" || _statusCode[0] == '1'))
+        response += ("\r\n" + _body + "\r\n");
     return response;
 
 };

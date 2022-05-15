@@ -20,7 +20,7 @@ private:
 
 public:
     Response(void);
-    Response(std::string const &statusCode, const std::string &uri);
+    Response(std::string const& statusCode,  std::string const& uri = "/");
     //Response(std::string statusCode, int);
     Response(Response const &copy);
     Response &operator=(Response const &source);
@@ -32,7 +32,7 @@ public:
     void setHeaders(const std::string &uri); //-
     void setDate(void);
     void setContentType(const std::string &file);
-    void setContentLenght(void);
+    void setContentLength(void);
     void setContentLocation(const std::string &uri);
     void setContentLanguage(const std::string &lang = "en");
     void setContentEncoding(void); // ?????????

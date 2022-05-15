@@ -4,5 +4,5 @@
 
 class Autoindex {
     public:
-        std::string createPage(const std::string &path, const std::string &host, const std::string &port);
+        std::string createPage(const std::string &path, const std::string &uri);
 };

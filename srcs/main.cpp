@@ -5,13 +5,12 @@ int main(int argc, char **argv)
 {
     Parser      parser = Parser();
     Webserver   webserv = Webserver();
+    std::string configPath = "./configs/example_1.conf";
 
-    if (argc != 2) {
-        std::cerr << "Invalid arguments" << std::endl;
-        return (1);
-    }
+    if (argc != 2)
+        configPath = argv[1];
     try {
-        parser.parse(argv[1]);
+        parser.parse(configPath);
         webserv.run(parser.getServers());
     }
     catch (std::exception &e) {

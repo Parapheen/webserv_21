@@ -56,42 +56,47 @@ bool Request::getHeaders(std::string message)
     return false;
 }
 
-// std::string deleteSpace(std::string str)
-// {
-//     size_t start = 0;
-//     size_t end = str.size() - 1;
+std::string deleteSpace(std::string str)
+{
+    size_t start = 0;
+    size_t end = str.size() - 1;
     
-//     while (str[start++] == ' ');
-//     while (str[end++] == ' ');
-//     return str.substr(--start, end);
-// }
+    while (str[start++] == ' ');
+    while (str[end++] == ' ');
+    return str.substr(--start, end);
+}
 
-Response Request::parse(const std::string &message)
+std::string Request::parseFirstLine(std::string firstLine)
 {
     size_t pos1, pos2;
 
-    if (message.find("\r\n") == std::string::npos)
-        return Response("400", _uri);
-    std::string firstLine = message.substr(0, message.find("\r\n"));
     if ((pos1 = firstLine.find_first_of(" ")) == std::string::npos)
-        return Response("400", _uri);
+        return "400";
     _method = firstLine.substr(0, pos1);
     if ((pos2 = firstLine.find_last_of(" ")) == std::string::npos)
-        return Response("400", _uri);
+        return "400";
     _version = firstLine.substr(pos2 + 1);
     _uri = firstLine.substr(pos1 + 1, pos2 - 1 - pos1);
     if (_version[0] == ' ' || _uri[0] == ' ')
-        return Response("400", _uri);
+        return "400";
     if (_version != "HTTP/1.1")
-        return Response("505", _uri);
+        return "505";
+    return "";
+}
 
-    // The presence of a message body in a request is signaled by a Content-Length or Transfer-Encoding header field !!!
-    if (message.find("\r\n\r\n") == std::string::npos) // ?? if no \r\n\r\n then there is no headers and shoul be \r\n
+Response Request::parse(const std::string &message)
+{
+    std::string error = "";
+
+    if (message.find("\r\n") == std::string::npos)
+        return Response("400");
+    if ((error = parseFirstLine(message.substr(0, message.find("\r\n")))) != "")
+        return Response(error, _uri);
+    if (message.find("\r\n\r\n") == std::string::npos)
     {
         if (message.find("\r\n") == std::string::npos)
             return Response("400", _uri);
-        else
-            getHeaders(message.substr(message.find("\r\n") + 2));
+        getHeaders(message.substr(message.find("\r\n") + 2));
     }
     else
     {
@@ -105,12 +110,16 @@ Response Request::parse(const std::string &message)
 Response Request::execute()
 {
     Response resp;
+    
+    _currentLocation = chooseLocation();
 
-    if (_method == "GET")
+    if (_currentLocation.getRedirectionCode() != "")
+        return Response(_currentLocation.getRedirectionCode(), _currentLocation.getRedirectionUrl());
+    if (_method == "GET" && _currentLocation.methodExists(GET))
         resp = execGet();
-    else if (_method == "POST")
+    else if (_method == "POST" && _currentLocation.methodExists(POST))
         resp = execPost();
-    else if (_method == "DELETE")
+    else if (_method == "DELETE" && _currentLocation.methodExists(DELETE))
         resp = execDelete();
     else
         return Response("405", _uri);
@@ -137,33 +146,30 @@ Response Request::execute()
 
 void Request::initPort(void)
 {
-    std::string host;
-    std::string port;
     std::string hostPost = _headers.find("Host")->second;
-    host = hostPost.substr(0, hostPost.find(":"));
+    _host = hostPost.substr(1, hostPost.find(":") - 1);
     if (hostPost.find(":") == std::string::npos)
-        port = "80";
+        _port = "80";
     else
-        port = hostPost.substr(hostPost.find(":") + 1);
+        _port = hostPost.substr(hostPost.find(":") + 1);
 };
 
 LocationCfg Request::chooseLocation(void)
 {
     LocationCfg location = *(_conf.getLocations().begin());
     size_t maxLen = 0;
-    std::string path = "";
-    std::string fullPath = "";
     for (std::vector<LocationCfg>::const_iterator it = _conf.getLocations().begin(); it != _conf.getLocations().end(); it++)
     {
-        path = "";
-        fullPath = "";
         std::string sub = _uri.substr(0, it->getPath().size());
-        if (sub == it->getPath())
-            fullPath = it->getPath() + it->getRoot() + _uri;
-        if (fullPath.size() > maxLen)
+        if (sub == it->getPath()) {
+            if (it->getPath() == "/" && _uri == "/")
+                _absPath = "." + _uri;
+            else
+                _absPath = "./" + it->getRoot() + _uri;
+        }
+        if (_absPath.size() > maxLen)
         {
-            _absPath = fullPath;
-            maxLen = fullPath.size();
+            maxLen = _absPath.size();
             location = *it;
         }
     }
@@ -172,71 +178,56 @@ LocationCfg Request::chooseLocation(void)
 
 Response Request::execGet(void)
 {
-    std::fstream fs;
+    std::ifstream   fileStream;
     Response resp;
     std::string strh;
-    std::string my_str;
+    std::string fileContent;
     std::string maxPath;
 
     //parseUri();
-    if (_conf.getLocations().empty())
-        return Response("500", _uri); //or another error?? parser error
-    LocationCfg location = chooseLocation();
-    if (location.getMethod() != GET) 
-        return Response("405", _uri);
-    if (location.getRedirectionCode() != "")
-        return Response(location.getRedirectionCode(), location.getRedirectionUrl());
 
-    if (_uri[_uri.size() - 1] == '/')
+    if (_uri[_uri.size() - 1] == '/' || _isDirectory(_absPath.c_str()))
     {
-        if (location.getAutoIndex())
+        if (_currentLocation.getAutoIndex())
         {
             Autoindex autoindex;
             
-            initPort();
-            std::string page = autoindex.createPage(_uri, _host, _port);
+            std::string page = autoindex.createPage(_currentLocation.getRoot() + _uri, _uri);
             if (page == "")
-                return Response("500", _uri); // what response code send ??
+                return Response("500", _uri);
             _body = page;
+            resp.setHeaders(_uri);
+            resp.setBody(_body);
+            return resp;
         }
         else
         {
-            std::vector<std::string> indexes = location.getIndexes();
-            for (size_t i = 0; i < indexes.size(); i++)
-            {
-                std::fstream f(indexes[i]);
-                // _uri += indexes[i]; to correct path
-                if (f.good())
-                {
-                    f.open(_uri);
-                    while(!fs.eof())
-                    {
-                        std::getline(fs, strh);
-                        my_str += strh;
-                        if (!fs.eof())
-                            my_str += '\n';
-                    }
-                    _body = my_str;
-                    f.close();
-                    break ;
-                }
-            }
+            std::string index = _currentLocation.getIndex();
+            std::string targetFile = "./" + _currentLocation.getRoot() + index;
+            fileStream.open(targetFile);
+            if (!fileStream.is_open())
+                return Response("404", _uri);
+            while(getline(fileStream, strh))
+                fileContent += strh;
+            fileContent += '\n';
+            _body = fileContent;
+            fileStream.close();
+            resp.setHeaders(_uri);
+            resp.setBody(_body);
+            return resp;
         }
     }
 
-    fs.open(_uri);
-    if (!fs.good())
-        return Response("500", _uri);
-    while(!fs.eof())
-    {
-        std::getline(fs, strh);
-        my_str += strh;
-        if (!fs.eof())
-            my_str += '\n';
-    }
-    _body = my_str;
-    fs.close();
+    fileStream.open(_absPath);
+    if (!fileStream.is_open())
+        return Response("404", _uri);
+    while(getline(fileStream, strh))
+        fileContent += strh;
+    fileContent += '\n';
+    _body = fileContent;
+    fileStream.close();
     resp.setHeaders(_uri);
+    resp.setBody(_body);
     return resp;
 };
 
@@ -252,29 +243,22 @@ Response Request::execPost(void)
 {
     size_t point;
 
-    if (_conf.getLocations().empty())
-        return Response("500", _uri); //or another error??
-    
-    LocationCfg location = chooseLocation();
-    if (location.getMethod() != POST)
-        return Response("405", _uri);
-    if (location.getClientBodyBufferSize() > 0 && location.getClientBodyBufferSize() != static_cast<long long>(_body.size()))
+    if (_currentLocation.getClientBodyBufferSize() > 0 && _currentLocation.getClientBodyBufferSize() != static_cast<long long>(_body.size()))
         return Response("413", _uri);
-    if (location.getRedirectionCode() != "")
-        return Response(location.getRedirectionCode(), location.getRedirectionUrl());
 
     
     // Когда веб-браузер отправляет POST-запрос с элементами веб-формы, по умолчанию интернет-тип данных медиа — multipart/form-data, типы не чувствительны к регистру
-    // if (_headers.find("Content-Type") != _headers.end() && _headers.find("Content-Type")->second == "multipart/form-data")
-    // {
-    //     // what should be happen?
+    if (_headers.find("Content-Type") != _headers.end() && _headers.find("Content-Type")->second == "multipart/form-data")
+    {
 
-    // }
-    // else 
+    }
+    else {
+
+    }
     if ((point = _uri.find_last_of(".")) != std::string::npos)
     {
         std::map<std::string, std::string> params; // maybe it isn't nesseccary and put all body to cgi
-        if (_uri.substr(point + 1) == location.getCgiExpantion())
+        if (_uri.substr(point + 1) == _currentLocation.getCgiExtention())
         {
             // Cgi cgi(location, _headers);
             // return Response(cgi.result());
@@ -302,15 +286,8 @@ Response Request::execPost(void)
 
 Response Request::execDelete(void)
 {
-    if (_conf.getLocations().empty())
-        return Response("500", _uri); //or another error??
-    LocationCfg location = chooseLocation();
-    if (location.getMethod() != DELETE)
-        return Response("405", _uri);
-    if (location.getClientBodyBufferSize() > 0 && location.getClientBodyBufferSize() != static_cast<long long>(_body.size()))
+    if (_currentLocation.getClientBodyBufferSize() > 0 && _currentLocation.getClientBodyBufferSize() != static_cast<long long>(_body.size()))
         return Response("413", _uri);
-    if (location.getRedirectionCode() != "")
-        return Response(location.getRedirectionCode(), location.getRedirectionUrl());
 
     std::ifstream ifs (_uri);
     struct stat buffer;
@@ -338,6 +315,13 @@ std::string Request::getRequest(void)
         request += ("\r\n" + _body + "\r\n");
     return request;
 };
+
+bool Request::_isDirectory(const char *path) {
+   struct stat statbuf;
+   if (stat(path, &statbuf) == 0)
+       return (statbuf.st_mode & S_IFDIR);
+   return false;
+}
 
 std::ostream& operator<<(std::ostream &out, Request request)
 {

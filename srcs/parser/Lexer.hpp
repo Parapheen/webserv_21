@@ -10,6 +10,7 @@ enum TOKENS {
     CLOSE_BRACKET,
     HASHTAG,
     WORD,
+    SEMICOLON,
 };
 
 typedef std::pair<std::string, TOKENS> TokenPair;

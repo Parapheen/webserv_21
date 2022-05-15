@@ -28,12 +28,16 @@ void    Parser::_addServer(const ServerCfg &server) {
     this->_servers.push_back(server);
 }
 
+void    Parser::_throwError(const std::string &msg) {
+    std::ostringstream errMsg;
+    errMsg << msg;
+    throw std::runtime_error(errMsg.str());
+}
+
 std::pair<int, std::string>  Parser::_parseErrorPage(size_t *tokenPos, const std::vector<TokenPair> &tokens) {
     if (!this->_isNumber(tokens[*tokenPos].first) || std::atoi(tokens[*tokenPos].first.c_str()) > 600
         || std::atoi(tokens[*tokenPos].first.c_str()) < 100) {
-        std::ostringstream errMsg;
-        errMsg << "Parser error\nstatus code for error_page should be a valid number and in range 100 <= x < 600";
-        throw std::runtime_error(errMsg.str());
+        this->_throwError("Parser error\nstatus code for error_page should be a valid number and in range 100 <= x < 600");
     }
     int statusCode = std::atoi(tokens[*tokenPos].first.c_str());
     ++(*tokenPos);
@@ -49,14 +53,10 @@ LocationCfg    Parser::_parseLocation(size_t *tokenPos, const std::vector<TokenP
         ++(*tokenPos);
     }
     else {
-        std::ostringstream errMsg;
-        errMsg << "Parser error\nLocation path should start with /";
-        throw std::runtime_error(errMsg.str());
+        this->_throwError("Parser error\nLocation path should start with /");
     }
     if (tokens[*tokenPos].second != OPEN_BRACKET) {
-        std::ostringstream errMsg;
-        errMsg << "Parser error\nBlock directive must be followed by {";
-        throw std::runtime_error(errMsg.str());
+        this->_throwError("Parser error\nBlock directive must be followed by {");
     }
     else
         ++(*tokenPos);
@@ -66,40 +66,69 @@ LocationCfg    Parser::_parseLocation(size_t *tokenPos, const std::vector<TokenP
             case WORD:
                 if (tokens[*tokenPos].first == "method") {
                     ++(*tokenPos);
-                    location.setMethod(tokens[*tokenPos].first);
+                    while (tokens[*tokenPos].second != SEMICOLON) {
+                        location.addMethod(tokens[*tokenPos].first);
+                        ++(*tokenPos);
+                    }
                 }
                 else if (tokens[*tokenPos].first == "autoindex") {
                     ++(*tokenPos);
-                    bool    v;
+                    bool    v = false;
                     if (tokens[*tokenPos].first == "on")
                         v = true;
                     else if (tokens[*tokenPos].first == "off")
                         v = false;
                     else {
-                        std::ostringstream errMsg;
-                        errMsg << "Parser error\nautoindex is either 'on' or 'off'";
-                        throw std::runtime_error(errMsg.str());
+                        this->_throwError("Parser error\nautoindex is either 'on' or 'off'");
                     }
                     location.setAutoIndex(v);
                 }
                 else if (tokens[*tokenPos].first == "client_body_buffer_size") {
                     ++(*tokenPos);
                     if (!this->_isNumber(tokens[*tokenPos].first)) {
-                        std::ostringstream errMsg;
-                        errMsg << "Parser error\nclient_body_buffer_size should be a valid positive number";
-                        throw std::runtime_error(errMsg.str());
+                        this->_throwError("Parser error\nclient_body_buffer_size should be a valid positive number");
                     }
                     location.setClientBodyBufferSize(std::atol(tokens[*tokenPos].first.c_str()));
                 }
                 else if (tokens[*tokenPos].first == "root") {
                     ++(*tokenPos);
-                    location.setRoot(tokens[*tokenPos].first);
+                    std::string rootStr = tokens[*tokenPos].first;
+                    if (rootStr[rootStr.size() - 1] != '/') {
+                        this->_throwError("Root must be a directory and end with /");
+                    }
+                    location.setRoot(rootStr.substr(0, rootStr.size() - 1));
+                }
+                else if (tokens[*tokenPos].first == "index") {
+                    ++(*tokenPos);
+                    location.setIndex(tokens[*tokenPos].first);
+                }
+                else if (tokens[*tokenPos].first == "upload_dir") {
+                    ++(*tokenPos);
+                    location.setUploadDir(tokens[*tokenPos].first);
+                }
+                else if (tokens[*tokenPos].first == "cgi_extension") {
+                    ++(*tokenPos);
+                    location.setCgiExtention(tokens[*tokenPos].first);
+                }
+                else if (tokens[*tokenPos].first == "cgi_path") {
+                    ++(*tokenPos);
+                    location.setCgiPath(tokens[*tokenPos].first);
+                }
+                else if (tokens[*tokenPos].first == "return") {
+                    ++(*tokenPos);
+                    if (!this->_isNumber(tokens[*tokenPos].first) || std::atoi(tokens[*tokenPos].first.c_str()) > 600
+                        || std::atoi(tokens[*tokenPos].first.c_str()) < 100) {
+                        this->_throwError("Parser error\nRedirection status should be a valid number");
+                    }
+                    location.setRedirectionCode(tokens[*tokenPos].first);
+                    ++(*tokenPos);
+                    location.setRedirectionUrl(tokens[*tokenPos].first);
                 }
                 break;
+            case SEMICOLON:
+                break;
             default:
-                std::ostringstream errMsg;
-                errMsg << "Parser error\nInvalid token in block directive";
-                throw std::runtime_error(errMsg.str());
+                this->_throwError("Parser error\nInvalid token in block directive");
         }
         ++(*tokenPos);
     }
@@ -108,9 +137,7 @@ LocationCfg    Parser::_parseLocation(size_t *tokenPos, const std::vector<TokenP
 
 void    Parser::_parseServer(size_t *tokenPos, const std::vector<TokenPair> &tokens) {
     if (tokens[*tokenPos].second != OPEN_BRACKET) {
-        std::ostringstream errMsg;
-        errMsg << "Parser error\nBlock directive must be followed by {";
-        throw std::runtime_error(errMsg.str());
+        this->_throwError("Parser error\nBlock directive must be followed by {");
     }
     else
         ++(*tokenPos);
@@ -123,9 +150,7 @@ void    Parser::_parseServer(size_t *tokenPos, const std::vector<TokenPair> &tok
             if (tokens[*tokenPos].first == "listen") {
                 ++(*tokenPos);
                 if (!this->_isNumber(tokens[*tokenPos].first)) {
-                    std::ostringstream errMsg;
-                    errMsg << "Parser error\nListen port should be a valid number";
-                    throw std::runtime_error(errMsg.str());
+                    this->_throwError("Parser error\nListen port should be a valid number");
                 }
                 newServer.setPort(std::atoi(tokens[*tokenPos].first.c_str()));
             }
@@ -135,7 +160,11 @@ void    Parser::_parseServer(size_t *tokenPos, const std::vector<TokenPair> &tok
             }
             else if (tokens[*tokenPos].first == "root") {
                 ++(*tokenPos);
-                newServer.setRoot(tokens[*tokenPos].first);
+                std::string rootStr = tokens[*tokenPos].first;
+                if (rootStr[rootStr.size() - 1] != '/') {
+                    this->_throwError("Root must be a directory and end with /");
+                }
+                newServer.setRoot(rootStr.substr(0, rootStr.size() - 1));
             }
             else if (tokens[*tokenPos].first == "error_page") {
                 ++(*tokenPos);
@@ -148,19 +177,19 @@ void    Parser::_parseServer(size_t *tokenPos, const std::vector<TokenPair> &tok
                 newServer.addLocation(location);
             }
             else {
-                std::ostringstream errMsg;
-                errMsg << "Parser error\nUnknown token: '" << tokens[*tokenPos].first << "'" << " Available tokens: listen, server_name, location, root, error_page, client_body_buffer_size, autoindex";
-                throw std::runtime_error(errMsg.str());
+                this->_throwError("Parser error\nUnknown token: '" + tokens[*tokenPos].first + "'" + " Available tokens: listen, server_name, location, root, error_page, client_body_buffer_size, autoindex");
             }
             break;
+        case SEMICOLON:
+            break;
         default:
-            std::ostringstream errMsg;
-            errMsg << "Parser error\nInvalid token: '" << tokens[*tokenPos].first << "'" << " in block directive";
-            throw std::runtime_error(errMsg.str());
+            this->_throwError("Parser error\nInvalid token: '" + tokens[*tokenPos].first + "'" + " in block directive");
         }
         ++(*tokenPos);
     }
     std::cout << "---SERVER---\n" << newServer << std::endl;
+    if (newServer.getLocations().empty())
+        this->_throwError("Parser error\nAt least one location required");
     this->_addServer(newServer);
 }
 
@@ -171,9 +200,7 @@ void    Parser::parse(const std::string &filePath) {
         if (tokens[i].first == "server")
             this->_parseServer(&(++i), tokens);
         else {
-            std::ostringstream errMsg;
-            errMsg << "Parser error\nUnknown directive: '" << tokens[i].first << "'";
-            throw std::runtime_error(errMsg.str());
+            this->_throwError("Parser error\nUnknown directive: '" + tokens[i].first + "'");
         }
     }
 }

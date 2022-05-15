@@ -43,6 +43,11 @@ void    Lexer::handleLine(const std::string &line) {
     this->_split(line, splitted, ' ');
     std::vector<std::string>::iterator  it = splitted.begin();
 
+    if (*it != "#" && line[line.size() - 1] != ';' && line[line.size() - 1] != '{' && line[line.size() - 1] != '}') {
+        std::ostringstream errMsg;
+        errMsg << "Lexer error\nLine should end with ';', '{' or '}'\n" << line;
+        throw std::runtime_error(errMsg.str());
+    }
     while (it != splitted.end()) {
         if (*it == "{")
             this->_tokens.push_back(std::pair<std::string, TOKENS>(*it, OPEN_BRACKET));
@@ -50,8 +55,14 @@ void    Lexer::handleLine(const std::string &line) {
             this->_tokens.push_back(std::pair<std::string, TOKENS>(*it, CLOSE_BRACKET));
         else if (*it == "#") // comment line
             break ;
-        else
-            this->_tokens.push_back(std::pair<std::string, TOKENS>(*it, WORD));
+        else {
+            if ((*it)[(*it).size() - 1] == ';') {
+                this->_tokens.push_back(std::pair<std::string, TOKENS>((*it).substr(0, (*it).size() - 1), WORD));
+                this->_tokens.push_back(std::pair<std::string, TOKENS>(";", SEMICOLON));
+            }
+            else
+                this->_tokens.push_back(std::pair<std::string, TOKENS>(*it, WORD));
+        }
         it++;
     }
 }
@@ -68,6 +79,7 @@ void    Lexer::tokenize(const std::string &filePath) {
     }
     while (getline(fileStream, line))
         this->handleLine(line);
+    fileStream.close();
     return ;
 }
 

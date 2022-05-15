@@ -1,7 +1,11 @@
 #include "ServerCfg.hpp"
 
 ServerCfg::ServerCfg(void) : _port(8000), _name(""), _root("/"), _errorPages(std::map<int, std::string>()),
-    _locations(std::vector<LocationCfg>()) { return; }
+    _locations(std::vector<LocationCfg>()) {
+    this->_errorPages[500] = "www/error_pages/500.html";
+    this->_errorPages[404] = "www/error_pages/404.html";
+    return;
+}
 
 ServerCfg::ServerCfg(const ServerCfg &instance) : _port(instance.getPort()), _name(instance.getName()),
     _root(instance.getRoot()), _errorPages(instance.getErrorPages()), _locations(instance.getLocations()) {

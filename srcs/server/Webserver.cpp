@@ -64,7 +64,5 @@ void    Webserver::run(const std::vector<ServerCfg> &servers) {
 }
 
 Webserver::~Webserver(void) {
-    delete this->_serversManager;
-    delete this->_clientsManager;
     return ;
 }

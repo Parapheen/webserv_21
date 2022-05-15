@@ -19,6 +19,7 @@ class Parser {
         std::pair<int, std::string> _parseErrorPage(size_t *tokenPos, const std::vector<TokenPair> &tokens);
         LocationCfg                 _parseLocation(size_t *tokenPos, const std::vector<TokenPair> &tokens);
         void                        _parseServer(size_t *tokenPos, const std::vector<TokenPair> &tokens);
+        void                        _throwError(const std::string &msg);
 
     public:
         Parser(void);

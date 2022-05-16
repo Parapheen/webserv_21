@@ -1,12 +1,12 @@
 #include "Request.hpp"
 #include "Autoindex.hpp"
+#define BOUNDARY_PREFIX_LEN 2
 
 Request::Request(void): _headers(std::map<std::string, std::string>()) { return; };
 
 Request::Request(Request const &copy): _method(copy._method), _uri(copy._uri), _version(copy._version), _headers(copy._headers), _body(copy._body) { return; };
 
-Request& Request::operator=(Request const& source)
-{
+Request& Request::operator=(Request const& source) {
     if (this != &source)
     {
         this->_method = source._method;
@@ -24,6 +24,7 @@ const std::string                           &Request::getMethod(void) const { re
 const std::string                           &Request::getUri(void) const { return this->_uri; };
 const std::string                           &Request::getVersion(void) const { return this->_version; };
 const std::string                           &Request::getBody(void) const { return this->_body; };
+const std::string                           &Request::getAbsPath(void) const { return this->_absPath; };
 const std::string                           &Request::getRoot(const LocationCfg &location) const {
     if (location.getRoot() != "")
         return location.getRoot();
@@ -39,58 +40,7 @@ void Request::setBody(const std::string &body) { this->_body = body; };
 void Request::setHeaders(const std::map<std::string, std::string> &headers) { this->_headers = headers; };
 void Request::setConfig(ServerCfg const& config) { this->_conf = config; };
 
-bool Request::getHeaders(std::string message)
-{
-    //add checking if the header is already exist, then just?? add value to saved value
-    std::string newline = message;
-    std::string header = "";
-    std::string value = "";
-    size_t pos = message.find("\r\n");
-    while (pos != std::string::npos)
-    {
-        newline = message.substr(0, pos);
-        header = newline.substr(0, newline.find_first_of(":"));
-        if (header.find(" ") != std::string::npos)
-            return true;
-        //value = deleteSpaces(newline.substr(newline.find_first_of(":") + 1));
-        value = newline.substr(newline.find_first_of(":") + 1);
-        _headers[header] = value;
-        message = message.substr(pos + 2);
-        pos = message.find("\r\n");
-    }
-    return false;
-}
-
-std::string deleteSpace(std::string str)
-{
-    size_t start = 0;
-    size_t end = str.size() - 1;
-    
-    while (str[start++] == ' ');
-    while (str[end++] == ' ');
-    return str.substr(--start, end);
-}
-
-std::string Request::parseFirstLine(std::string firstLine)
-{
-    size_t pos1, pos2;
-
-    if ((pos1 = firstLine.find_first_of(" ")) == std::string::npos)
-        return "400";
-    _method = firstLine.substr(0, pos1);
-    if ((pos2 = firstLine.find_last_of(" ")) == std::string::npos)
-        return "400";
-    _version = firstLine.substr(pos2 + 1);
-    _uri = firstLine.substr(pos1 + 1, pos2 - 1 - pos1);
-    if (_version[0] == ' ' || _uri[0] == ' ')
-        return "400";
-    if (_version != "HTTP/1.1")
-        return "505";
-    return "";
-}
-
-Response Request::parse(const std::string &message)
-{
+Response Request::parse(const std::string &message) {
     std::string error = "";
 
     if (message.find("\r\n") == std::string::npos)
@@ -112,14 +62,63 @@ Response Request::parse(const std::string &message)
     return execute();
 };
 
-Response Request::execute()
-{
-    Response resp;
-    
-    _currentLocation = chooseLocation();
+std::string Request::parseFirstLine(std::string firstLine) {
+    size_t pos1, pos2;
 
+    if ((pos1 = firstLine.find_first_of(" ")) == std::string::npos)
+        return "400";
+    _method = firstLine.substr(0, pos1);
+    if ((pos2 = firstLine.find_last_of(" ")) == std::string::npos)
+        return "400";
+    _version = firstLine.substr(pos2 + 1);
+    _uri = firstLine.substr(pos1 + 1, pos2 - 1 - pos1);
+    if (_version[0] == ' ' || _uri[0] == ' ')
+        return "400";
+    if (_version != "HTTP/1.1")
+        return "505";
+    return "";
+}
+
+bool Request::getHeaders(std::string message) {
+    //add checking if the header is already exist, then just?? add value to saved value
+    std::string newline = message;
+    std::string header = "";
+    std::string value = "";
+    size_t pos = message.find("\r\n");
+    while (pos != std::string::npos)
+    {
+        newline = message.substr(0, pos);
+        header = newline.substr(0, newline.find_first_of(":"));
+        if (header.find(" ") != std::string::npos)
+            return true;
+        value = newline.substr(newline.find_first_of(":") + 1);
+        _headers[header] = value;
+        message = message.substr(pos + 2);
+        pos = message.find("\r\n");
+    }
+    return false;
+}
+
+Response Request::execute() {
+    Response resp;
+    // size_t  point;
+    
+    this->_currentLocation = this->chooseLocation();
+    this->constructAbsPath();
+    // if ((point = _uri.find_last_of(".")) != std::string::npos)
+    // {
+    //     std::map<std::string, std::string> params; // maybe it isn't nesseccary and put all body to cgi
+    //     if (_uri.substr(point + 1) == _currentLocation.getCgiExtention())
+    //     {
+    //         // Cgi cgi(location, _headers);
+    //         // return Response(cgi.result());
+    //     }
+    //     else
+    //         return Response("500" , _uri); // ?????
+    // }
     if (_currentLocation.getRedirectionCode() != "")
         return Response(_currentLocation.getRedirectionCode(), _currentLocation.getRedirectionUrl());
+
     if (_method == "GET" && _currentLocation.methodExists(GET))
         resp = execGet();
     else if (_method == "POST" && _currentLocation.methodExists(POST))
@@ -131,65 +130,44 @@ Response Request::execute()
     return resp;
 };
 
-// void Request::parseUri()
-// {
-//     if (_uri.find("?") == std::string::npos)
-//         return ;
-//     std::string findParams = _uri.substr(_uri.find("?") + 1);
-//     _uri =  _uri.substr(0, _uri.find("?"));
-//     std::map<std::string, std::string> params;
-//     std::string tmp;
-//     while (findParams.find("&") != std::string::npos)
-//     {
-//         tmp = findParams.substr(0, findParams.find("&"));
-//         findParams = findParams.substr(findParams.find("&") + 1);
-//         params[tmp.substr(0, tmp.find("="))] = tmp.substr(tmp.find("=") + 1);
-//     }
-//     if (!findParams.empty())
-//         params[findParams.substr(0, findParams.find("="))] = findParams.substr(findParams.find("=") + 1);
-// };
-
-void Request::initPort(void)
-{
-    std::string hostPost = _headers.find("Host")->second;
-    _host = hostPost.substr(1, hostPost.find(":") - 1);
-    if (hostPost.find(":") == std::string::npos)
-        _port = "80";
-    else
-        _port = hostPost.substr(hostPost.find(":") + 1);
-};
-
-LocationCfg Request::chooseLocation(void)
-{
-    LocationCfg location = *(_conf.getLocations().begin());
-    size_t maxLen = 0;
+LocationCfg Request::chooseLocation(void) {
+    LocationCfg location;
     for (std::vector<LocationCfg>::const_iterator it = _conf.getLocations().begin(); it != _conf.getLocations().end(); it++)
     {
-        std::string sub = _uri.substr(0, it->getPath().size());
-        if (sub == it->getPath()) {
-            if (it->getPath() == "/" && _uri == "/")
-                _absPath = "." + _uri;
-            else
-                _absPath = "./" + this->getRoot(*it) + _uri.substr(1, _uri.size());
-        }
-        if (_absPath.size() > maxLen)
-        {
-            maxLen = _absPath.size();
+        if (it->getPath() == "/")
             location = *it;
+        else if (it->getPath() == this->getUri()) {
+            location = *it;
+            break;
         }
     }
     return location;
 };
 
-Response Request::execGet(void)
-{
+void Request::constructAbsPath(void) {
+    std::string root = this->_currentLocation.getRoot();
+    bool isRootAbsolutePath = root[0] == '/';
+
+    if (this->_uri != "/") {
+        if (isRootAbsolutePath)
+            this->_absPath = root + this->_uri.substr(1);
+        else
+            this->_absPath = "./" + root + this->_uri.substr(1);
+    }
+    else {
+        if (isRootAbsolutePath)
+            this->_absPath = root;
+        else
+            this->_absPath = "./" + root;
+    }
+}
+
+Response Request::execGet(void) {
     std::ifstream   fileStream;
     Response resp;
     std::string strh;
     std::string fileContent;
     std::string maxPath;
-
-    //parseUri();
 
     if (_uri[_uri.size() - 1] == '/' || _isDirectory(_absPath.c_str()))
     {
@@ -236,66 +214,94 @@ Response Request::execGet(void)
     return resp;
 };
 
-std::string myToLower(const std::string &str)
-{
-    std::string res;
-    for (size_t i = 0; i < str.size(); i++)
-        res[i] = std::tolower(str[i]);
-    return res;
-};
+Response Request::execPost(void) {
+    if (this->_currentLocation.getClientBodyBufferSize() < static_cast<long long>(_body.size()))
+        return Response("413", this->_uri);
 
-Response Request::execPost(void)
-{
-    size_t point;
-
-    if (_currentLocation.getClientBodyBufferSize() > 0 && _currentLocation.getClientBodyBufferSize() != static_cast<long long>(_body.size()))
-        return Response("413", _uri);
-
-    
-    // Когда веб-браузер отправляет POST-запрос с элементами веб-формы, по умолчанию интернет-тип данных медиа — multipart/form-data, типы не чувствительны к регистру
-    if (_headers.find("Content-Type") != _headers.end() && _headers.find("Content-Type")->second == "multipart/form-data")
+    if (this->_headers.find("Content-Type") != this->_headers.end() && this->_headers.find("Content-Type")->second.find("multipart/form-data;"))
+        return this->_handleFormData();
+    std::fstream fs;
+    fs.open(this->_uri);
+    if (!fs.is_open())
     {
-
-    }
-    else {
-
-    }
-    if ((point = _uri.find_last_of(".")) != std::string::npos)
-    {
-        std::map<std::string, std::string> params; // maybe it isn't nesseccary and put all body to cgi
-        if (_uri.substr(point + 1) == _currentLocation.getCgiExtention())
-        {
-            // Cgi cgi(location, _headers);
-            // return Response(cgi.result());
-        }
-        else
-            return Response("500" , _uri); // ?????
-    }
-    else
-    {
-        std::fstream fs;
-        fs.open(_uri);
-        if (!fs.is_open())
-        {
-            fs.clear();
-            //check filename
-            fs.open(_uri, std::ios::out);
-            fs.close();
-            fs.open(_uri);
-        }
-        fs << _body;
+        fs.clear();
+        fs.open(this->_uri, std::ios::out);
         fs.close();
+        fs.open(this->_uri);
     }
-    return Response("200", _uri);
+    fs << this->_body;
+    fs.close();
+    return Response("200", this->_uri);
 };
 
-Response Request::execDelete(void)
-{
-    if (_currentLocation.getClientBodyBufferSize() > 0 && _currentLocation.getClientBodyBufferSize() != static_cast<long long>(_body.size()))
-        return Response("413", _uri);
+Response Request::_handleFormData(void) {
+    typedef std::pair<std::string, std::string> FilePair;
+    std::vector<FilePair> filesToAdd;
+    std::string boundary = this->_getFormDataBoundaryName();
+    size_t start;
+    size_t offset;
 
+    if (boundary == "")
+        return Response("500", _uri);
+    start = this->_body.find(boundary, 0);
+    while (start != std::string::npos) {
+        if (this->_isEndingBoundary(start, boundary.size()))
+            break ;
+        offset = start + boundary.size();
+        try {
+            filesToAdd.push_back(FilePair(this->_getFormDataFileName(offset), this->_getFormDataFileContent(boundary, offset)));
+        }
+        catch (std::exception &e) {
+            return Response("500", this->_uri);
+        }
+        start = this->_body.find(boundary, offset);
+    }
+    for (std::vector<FilePair>::iterator it = filesToAdd.begin(); it != filesToAdd.end(); it++) {
+        std::ofstream out(this->_currentLocation.getUploadDir() + it->first);
+        out << it->second;
+        out.close();
+    }
+    return Response("201", this->_uri);
+}
+
+std::string   Request::_getFormDataBoundaryName(void) {
+    size_t  start = this->_headers["Content-Type"].find("boundary=");
+
+    if (start == std::string::npos)
+        return "";
+    start += 9;
+    return this->_headers["Content-Type"].substr(start);
+}
+
+bool    Request::_isEndingBoundary(const size_t &startingPos, const size_t &boundarySize) {
+    std::cout << this->_body[startingPos + boundarySize] << std::endl;
+    std::cout << this->_body[startingPos + boundarySize + 1] << std::endl;
+    return this->_body[startingPos + boundarySize] == '-' && this->_body[startingPos + boundarySize + 1] == '-';
+}
+
+std::string  Request::_getFormDataFileName(const size_t &offset) {
+    size_t  fileNamePos = this->_body.find("filename=", offset);
+    size_t  i = 0;
+
+    if (fileNamePos == std::string::npos)
+        throw;
+    fileNamePos += 10; // filename= and '"'
+    while (this->_body[fileNamePos + i] != '"') ++i;
+    std::cout << this->_body.substr(fileNamePos, i) << std::endl;
+    return this->_body.substr(fileNamePos, i);
+}
+
+std::string  Request::_getFormDataFileContent(const std::string &boundaryName, const size_t &offset) {
+    size_t  startingFileContent = this->_body.find("\r\n\r\n", offset) + 4;
+    size_t  endingBoundary = this->_body.find(boundaryName, offset) - BOUNDARY_PREFIX_LEN - 2; // 2 is for '\r\n'
+    std::cout << this->_body.substr(startingFileContent, endingBoundary - startingFileContent) << std::endl;
+    return this->_body.substr(startingFileContent, endingBoundary - startingFileContent);
+}
+
+Response Request::execDelete(void) {
     std::ifstream ifs (_uri);
     struct stat buffer;
+
     if (!stat(_uri.c_str(), &buffer))
     {
         if (buffer.st_mode & S_IFDIR)
@@ -310,8 +316,7 @@ Response Request::execDelete(void)
     return Response("200", _uri); // return 204, if response without body
 };
 
-std::string Request::getRequest(void)
-{
+std::string Request::getRequest(void) {
     std::string request = "";
     request += (_method + " " + _uri + " " + _version + "\r\n");
     for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); it++)
@@ -328,8 +333,14 @@ bool Request::_isDirectory(const char *path) {
    return false;
 }
 
-std::ostream& operator<<(std::ostream &out, Request request)
-{
+std::string myToLower(const std::string &str) {
+    std::string res;
+    for (size_t i = 0; i < str.size(); i++)
+        res[i] = std::tolower(str[i]);
+    return res;
+};
+
+std::ostream& operator<<(std::ostream &out, Request request) {
     out << request.getRequest();
     return out;
 };

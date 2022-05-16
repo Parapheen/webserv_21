@@ -188,7 +188,7 @@ std::string Response::getResponse(void)
     for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); it++)
         response += (it->first + ": " + it->second + "\r\n");
     
-    if (_statusCode == "404" || _statusCode == "500")
+    if (_statusCode == "404" || _statusCode == "500" || _statusCode == "405")
     {
         std::ifstream fileStream;
         std::string fileContent;

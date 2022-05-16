@@ -104,6 +104,9 @@ LocationCfg    Parser::_parseLocation(size_t *tokenPos, const std::vector<TokenP
                 }
                 else if (tokens[*tokenPos].first == "upload_dir") {
                     ++(*tokenPos);
+                    if (tokens[*tokenPos].first[tokens[*tokenPos].first.size() - 1] != '/') {
+                        this->_throwError("Root must be a directory and end with /");
+                    }
                     location.setUploadDir(tokens[*tokenPos].first);
                 }
                 else if (tokens[*tokenPos].first == "cgi_extension") {

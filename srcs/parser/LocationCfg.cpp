@@ -3,13 +3,13 @@
 LocationCfg::LocationCfg(void) :
     _root("www/"),
     _path("."),
-    _methods(std::vector<METHOD>(GET)),
+    _methods(std::vector<METHOD>()),
     _autoIndex(false),
     _clientBodyBufferSize(10000000) { return; }
 
 LocationCfg::LocationCfg(const LocationCfg &instance) : _root(instance.getRoot()), _path(instance.getPath()),
     _methods(instance.getMethods()), _autoIndex(instance.getAutoIndex()), _clientBodyBufferSize(instance.getClientBodyBufferSize()),
-    _index(instance.getIndex()), _cgiExtention(instance.getCgiExtention()), _cgiPath(instance.getCgiPath()), _redirectionCode(instance.getRedirectionCode()),
+    _index(instance.getIndex()), _uploadDir(instance.getUploadDir()), _cgiExtention(instance.getCgiExtention()), _cgiPath(instance.getCgiPath()), _redirectionCode(instance.getRedirectionCode()),
     _redirectionUrl(instance.getRedirectionUrl()) {
     return ;
 }
@@ -21,6 +21,7 @@ LocationCfg   &LocationCfg::operator=(const LocationCfg &rhs) {
         this->_cgiPath = rhs._cgiPath;
         this->_clientBodyBufferSize = rhs._clientBodyBufferSize;
         this->_index = rhs._index;
+        this->_uploadDir = rhs._uploadDir;
         this->_methods = rhs._methods;
         this->_path = rhs._path;
         this->_redirectionCode = rhs._redirectionCode;

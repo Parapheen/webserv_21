@@ -27,7 +27,13 @@ private:
 
     ServerCfg                           _conf;
     LocationCfg                         _currentLocation;
+
     bool    _isDirectory(const char *path);
+    Response _handleFormData(void);
+    bool   _isEndingBoundary(const size_t &startPos, const size_t &boundarySize);
+    std::string   _getFormDataBoundaryName(void);
+    std::string  _getFormDataFileName(const size_t &offset);
+    std::string  _getFormDataFileContent(const std::string &boundaryName, const size_t &offset);
 
 public:
     Request(void);
@@ -39,6 +45,7 @@ public:
     const std::string                           &getUri(void) const;
     const std::string                           &getVersion(void) const;
     const std::string                           &getBody(void) const;
+    const std::string                           &getAbsPath(void) const;
     const std::string                           &getRoot(const LocationCfg &location) const;
     const std::map<std::string, std::string>    &getHeaders(void) const;
     const ServerCfg                             &getConfig(void) const;
@@ -61,6 +68,7 @@ public:
 
     std::string parseFirstLine(std::string firstLine);
     LocationCfg chooseLocation(void);
+    void    constructAbsPath(void);
     //void printRequest(Request req);
     // bool checkRediretion(LocationCfg const& location);
     std::string getRequest(void);

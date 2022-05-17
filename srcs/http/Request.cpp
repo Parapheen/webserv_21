@@ -44,19 +44,19 @@ Response Request::parse(const std::string &message) {
     std::string error = "";
 
     if (message.find("\r\n") == std::string::npos)
-        return Response("400");
+        return Response("400", _uri, _conf.getErrorPages());
     if ((error = parseFirstLine(message.substr(0, message.find("\r\n")))) != "")
-        return Response(error, _uri);
+        return Response(error, _uri, _conf.getErrorPages());
     if (message.find("\r\n\r\n") == std::string::npos)
     {
         if (message.find("\r\n") == std::string::npos)
-            return Response("400", _uri);
+            return Response("400", _uri, _conf.getErrorPages());
         getHeaders(message.substr(message.find("\r\n") + 2));
     }
     else
     {
         if (getHeaders(message.substr(message.find("\r\n") + 2, message.find("\r\n\r\n") - message.find("\r\n"))))
-            return Response("400", _uri);
+            return Response("400", _uri, _conf.getErrorPages());
         _body = message.substr(message.find("\r\n\r\n") + 4);
     }
     return execute();
@@ -117,7 +117,7 @@ Response Request::execute() {
     //         return Response("500" , _uri); // ?????
     // }
     if (_currentLocation.getRedirectionCode() != "")
-        return Response(_currentLocation.getRedirectionCode(), _currentLocation.getRedirectionUrl());
+        return Response(_currentLocation.getRedirectionCode(), _currentLocation.getRedirectionUrl(), _conf.getErrorPages());
 
     if (_method == "GET" && _currentLocation.methodExists(GET))
         resp = execGet();
@@ -126,7 +126,7 @@ Response Request::execute() {
     else if (_method == "DELETE" && _currentLocation.methodExists(DELETE))
         resp = execDelete();
     else
-        return Response("405", _uri);
+        return Response("405", _uri, _conf.getErrorPages());
     return resp;
 };
 
@@ -169,7 +169,7 @@ Response Request::execGet(void) {
     std::string fileContent;
     std::string maxPath;
 
-    if (_uri[_uri.size() - 1] == '/' || _isDirectory(_absPath.c_str()))
+    if (_isDirectory(_absPath.c_str()))
     {
         if (_currentLocation.getAutoIndex())
         {
@@ -177,7 +177,7 @@ Response Request::execGet(void) {
             
             std::string page = autoindex.createPage(this->getRoot(this->_currentLocation) + _uri, _uri);
             if (page == "")
-                return Response("500", _uri);
+                return Response("500", _uri, _conf.getErrorPages());
             _body = page;
             resp.setHeaders(_uri);
             resp.setBody(_body);
@@ -189,7 +189,7 @@ Response Request::execGet(void) {
             std::string targetFile = "./" + this->getRoot(this->_currentLocation) + index;
             fileStream.open(targetFile);
             if (!fileStream.is_open())
-                return Response("404", _uri);
+                return Response("404", _uri, _conf.getErrorPages());
             while(getline(fileStream, strh))
                 fileContent += strh;
             fileContent += '\n';
@@ -203,7 +203,7 @@ Response Request::execGet(void) {
 
     fileStream.open(_absPath);
     if (!fileStream.is_open())
-        return Response("404", _uri);
+        return Response("404", _uri, _conf.getErrorPages());
     while(getline(fileStream, strh))
         fileContent += strh;
     fileContent += '\n';
@@ -216,7 +216,7 @@ Response Request::execGet(void) {
 
 Response Request::execPost(void) {
     if (this->_currentLocation.getClientBodyBufferSize() < static_cast<long long>(_body.size()))
-        return Response("413", this->_uri);
+        return Response("413", _uri, _conf.getErrorPages());
 
     if (this->_headers.find("Content-Type") != this->_headers.end() && this->_headers.find("Content-Type")->second.find("multipart/form-data;"))
         return this->_handleFormData();
@@ -231,7 +231,7 @@ Response Request::execPost(void) {
     }
     fs << this->_body;
     fs.close();
-    return Response("200", this->_uri);
+    return Response("200", _uri, _conf.getErrorPages());
 };
 
 Response Request::_handleFormData(void) {
@@ -242,7 +242,7 @@ Response Request::_handleFormData(void) {
     size_t offset;
 
     if (boundary == "")
-        return Response("500", _uri);
+        return Response("500", this->_uri, this->_conf.getErrorPages());
     start = this->_body.find(boundary, 0);
     while (start != std::string::npos) {
         if (this->_isEndingBoundary(start, boundary.size()))
@@ -252,7 +252,7 @@ Response Request::_handleFormData(void) {
             filesToAdd.push_back(FilePair(this->_getFormDataFileName(offset), this->_getFormDataFileContent(boundary, offset)));
         }
         catch (std::exception &e) {
-            return Response("500", this->_uri);
+            return Response("500", this->_uri, this->_conf.getErrorPages());
         }
         start = this->_body.find(boundary, offset);
     }
@@ -261,7 +261,7 @@ Response Request::_handleFormData(void) {
         out << it->second;
         out.close();
     }
-    return Response("201", this->_uri);
+    return Response("201", this->_uri, this->_conf.getErrorPages());
 }
 
 std::string   Request::_getFormDataBoundaryName(void) {
@@ -299,21 +299,21 @@ std::string  Request::_getFormDataFileContent(const std::string &boundaryName, c
 }
 
 Response Request::execDelete(void) {
-    std::ifstream ifs (_uri);
+    std::ifstream ifs (this->_absPath);
     struct stat buffer;
 
-    if (!stat(_uri.c_str(), &buffer))
+    if (!stat(this->_absPath.c_str(), &buffer))
     {
         if (buffer.st_mode & S_IFDIR)
-            return Response("404", _uri);
+            return Response("404", this->_uri, this->_conf.getErrorPages());
         if (!(buffer.st_mode & S_IRUSR))
-            return Response("403", _uri);
-        if (!remove(_uri.c_str())) // if file removed, 0 will be returned
-            return Response("403", _uri);
+            return Response("403", this->_uri, this->_conf.getErrorPages());
+        if (remove(this->_absPath.c_str()))
+            return Response("403", this->_uri, this->_conf.getErrorPages());
     }
     else
-        return Response("404", _uri);
-    return Response("200", _uri); // return 204, if response without body
+        return Response("404", this->_uri, this->_conf.getErrorPages());
+    return Response("200", this->_uri, this->_conf.getErrorPages()); // return 204, if response without body
 };
 
 std::string Request::getRequest(void) {

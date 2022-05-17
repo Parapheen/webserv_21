@@ -34,15 +34,15 @@ void    Parser::_throwError(const std::string &msg) {
     throw std::runtime_error(errMsg.str());
 }
 
-std::pair<int, std::string>  Parser::_parseErrorPage(size_t *tokenPos, const std::vector<TokenPair> &tokens) {
+std::pair<std::string, std::string>  Parser::_parseErrorPage(size_t *tokenPos, const std::vector<TokenPair> &tokens) {
     if (!this->_isNumber(tokens[*tokenPos].first) || std::atoi(tokens[*tokenPos].first.c_str()) > 600
         || std::atoi(tokens[*tokenPos].first.c_str()) < 100) {
         this->_throwError("Parser error\nstatus code for error_page should be a valid number and in range 100 <= x < 600");
     }
-    int statusCode = std::atoi(tokens[*tokenPos].first.c_str());
+    std::string statusCode = tokens[*tokenPos].first.c_str();
     ++(*tokenPos);
     std::string filePath = tokens[*tokenPos].first;
-    return std::pair<int, std::string>(statusCode, filePath);
+    return std::pair<std::string, std::string>(statusCode, filePath);
 }
 
 LocationCfg    Parser::_parseLocation(size_t *tokenPos, const std::vector<TokenPair> &tokens) {
@@ -171,7 +171,7 @@ void    Parser::_parseServer(size_t *tokenPos, const std::vector<TokenPair> &tok
             }
             else if (tokens[*tokenPos].first == "error_page") {
                 ++(*tokenPos);
-                std::pair<int, std::string> errorPage = this->_parseErrorPage(tokenPos, tokens);
+                std::pair<std::string, std::string> errorPage = this->_parseErrorPage(tokenPos, tokens);
                 newServer.addErrorPage(errorPage.first, errorPage.second);
             }
             else if (tokens[*tokenPos].first == "location") {

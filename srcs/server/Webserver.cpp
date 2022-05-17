@@ -25,27 +25,51 @@ void    Webserver::handleEvent(const struct kevent &event) {
     else if (event.flags & EV_EOF) {
         this->_clientsManager->removeClient(event.ident);
     } // read message from client
-    else if (event.filter == EVFILT_READ) {
+    else if (event.filter == EVFILT_READ || event.filter == EVFILT_WRITE) {
         // chunked reading
-        char buf[event.data];
-        recv(event.ident, buf, sizeof(buf), 0);
-        printf("client at socketfd %lu: %s", event.ident, buf);
-        ServerCfg server = this->_clientsManager->getServerByClientFd(event.ident)->getServerConfig();
-        Request request = Request();
-        request.setConfig(server); // pass to constructor instead
-        Response response = request.parse(buf);
-        this->_clientsManager->setResponseToClient(event.ident, response);
-        this->_clientsManager->writeToClient(event.ident);
-    }
-    else if (event.filter == EVFILT_WRITE) {
-        Response response = this->_clientsManager->getResponseByClientFd(event.ident);
-        std::string responseStr = response.getResponse();
-        std::cout << responseStr << std::endl;
-        send(event.ident, responseStr.c_str(), strlen(responseStr.c_str()), 0);
-        this->_clientsManager->removeClient(event.ident);
+        this->_handleIO(event);
     }
     else
         this->_clientsManager->removeClient(event.ident);
+}
+
+void    Webserver::_handleIO(const struct kevent &event) {
+    if (event.filter == EVFILT_READ)
+        this->_handleRead(event);
+    else if (event.filter == EVFILT_WRITE)
+        this->_handleWrite(event);
+}
+
+void    Webserver::_handleRead(const struct kevent &event) {
+    char buf[event.data];
+    int recvRet;
+
+    recvRet = recv(event.ident, buf, sizeof(buf), 0);
+    if (recvRet == 0) {
+        this->_clientsManager->removeClient(event.ident);
+        return;
+    }
+    else if (recvRet == -1) {
+        this->_clientsManager->removeClient(event.ident);
+        return;
+    }
+    printf("client at socketfd %lu: %s", event.ident, buf);
+    ServerCfg server = this->_clientsManager->getServerByClientFd(event.ident)->getServerConfig();
+    Request request = Request();
+    request.setConfig(server);
+    Response response = request.parse(buf);
+    this->_clientsManager->setResponseToClient(event.ident, response);
+    this->_clientsManager->writeToClient(event.ident);
+}
+
+void    Webserver::_handleWrite(const struct kevent &event) {
+    Response response = this->_clientsManager->getResponseByClientFd(event.ident);
+    std::string responseStr = response.getResponse();
+
+    std::cout << responseStr << std::endl;
+    if (send(event.ident, responseStr.c_str(), strlen(responseStr.c_str()), 0) < 0)
+        this->_clientsManager->removeClient(event.ident);
+    this->_clientsManager->removeClient(event.ident);
 }
 
 void    Webserver::run(const std::vector<ServerCfg> &servers) {
@@ -63,6 +87,4 @@ void    Webserver::run(const std::vector<ServerCfg> &servers) {
     }
 }
 
-Webserver::~Webserver(void) {
-    return ;
-}
+Webserver::~Webserver(void) { return ; }

@@ -9,18 +9,19 @@ Response::Response(void):
 };
 
 Response::Response(Response const& copy):
-    _version(copy._version), _statusCode(copy._statusCode), _headers(copy._headers), _body(copy._body)
+    _version(copy._version), _statusCode(copy._statusCode), _headers(copy._headers), _body(copy._body), _statusMessages(copy._statusMessages), _errorPages(copy._errorPages)
 {
     initHeaders();
     initStatusMessages();
 };
 
-Response::Response(std::string const &statusCode, const std::string &uri)
+Response::Response(std::string const &statusCode, const std::string &uri, const std::map<std::string, std::string> &errorPages)
 {
     initHeaders();
     initStatusMessages();
     _version = "HTTP/1.1";
     _statusCode = statusCode;
+    _errorPages = errorPages;
     setHeaders(uri);
 };
 
@@ -34,6 +35,8 @@ Response& Response::operator=(Response const& source)
         _statusCode = source._statusCode;
         _headers = source._headers;
         _body = source._body;
+        _statusMessages = source._statusMessages;
+        _errorPages = source._errorPages;
     }
     return *this;
 };
@@ -67,7 +70,6 @@ void Response::initHeaders()
     _headers["Server"] = "Webserv MacOS";
 };
 
-//void Response::setHeaders(std::string lang, std::string uri)
 void Response::setHeaders(const std::string &uri)
 {
     setDate();
@@ -125,18 +127,12 @@ void Response::setContentLength()
     {
         oss << _body.size();
         _headers["Content-Lenght"] = oss.str();
-    }    
+    }
 };
 
-void Response::setContentLocation(std::string const& uri)
-{
-    _headers["Content-Location"] = uri;
-};
+void Response::setContentLocation(std::string const& uri){ _headers["Content-Location"] = uri; };
 
-void Response::setContentLanguage(std::string const& lang)
-{
-    _headers["Content-Language"] = lang;
-};
+void Response::setContentLanguage(std::string const& lang){ _headers["Content-Language"] = lang; };
 
 void Response::setLastModified(const std::string &file)
 {
@@ -176,11 +172,6 @@ void Response::setWwwAuthenticate(void)
     }
 };
 
-void Response::error(const std::string &statusCode)
-{
-    (void)statusCode;
-};
-
 std::string Response::getResponse(void)
 {
     std::string response = "";
@@ -188,12 +179,11 @@ std::string Response::getResponse(void)
     for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); it++)
         response += (it->first + ": " + it->second + "\r\n");
     
-    if (_statusCode == "404" || _statusCode == "500" || _statusCode == "405")
-    {
+    if (this->_hasDefaultErrorPage(this->_statusCode)) {
         std::ifstream fileStream;
         std::string fileContent;
 
-        fileStream.open("./www/error_pages/" + _statusCode + ".html");
+        fileStream.open(_errorPages.find(_statusCode)->second);
 
         while(getline(fileStream, fileContent))
             _body += fileContent;
@@ -201,17 +191,26 @@ std::string Response::getResponse(void)
         fileStream.close();
         response += ("\r\n" + _body + "\r\n");
     }
-    // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include a message body !!!
+    else if (this->_hasDefaultErrorPage(this->_statusCode)) {
+
+    }
+    // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include a message body
     else if (!(_statusCode == "204" || _statusCode == "304" || _statusCode[0] == '1'))
         response += ("\r\n" + _body + "\r\n");
     return response;
 
 };
 
-void Response::setBody(const std::string &body)
-{
-    _body = body;
-};
+bool    Response::_hasDefaultErrorPage(const std::string &statusCode) {
+    std::map<std::string, std::string>::iterator it = this->_errorPages.begin();
+    while (it != this->_errorPages.end()) {
+        if (it->first == statusCode)
+            return true;
+    }
+    return false;
+}
+
+void Response::setBody(const std::string &body) { this->_body = body; };
 
 std::ostream& operator<<(std::ostream &out, Response &response)
 {

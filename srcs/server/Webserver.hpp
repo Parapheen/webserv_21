@@ -11,6 +11,10 @@ class Webserver {
         ServersManager  *_serversManager;
         ClientsManager  *_clientsManager;
 
+        void    _handleIO(const struct kevent &event);
+        void    _handleRead(const struct kevent &event);
+        void    _handleWrite(const struct kevent &event);
+
     public:
         Webserver(void);
 
@@ -21,4 +25,11 @@ class Webserver {
 
         void        handleEvent(const struct kevent &event);
         void        run(const std::vector<ServerCfg> &servers);
+
+        class IOException : public std::exception {
+            virtual const char *what() const throw ();
+        };
+        class PeerConnectionClosedException : public std::exception {
+            virtual const char *what() const throw ();
+        };
 };

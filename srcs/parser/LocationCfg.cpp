@@ -2,7 +2,7 @@
 
 LocationCfg::LocationCfg(void) :
     _root("www/"),
-    _path("."),
+    _path("/"),
     _methods(std::vector<METHOD>()),
     _autoIndex(false),
     _clientBodyBufferSize(10000000) { return; }

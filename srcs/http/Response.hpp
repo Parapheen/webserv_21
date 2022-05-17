@@ -17,11 +17,13 @@ private:
     std::string                         _body;
 
     std::map<std::string, std::string>  _statusMessages;
+    std::map<std::string, std::string>  _errorPages;
+
+    bool    _hasDefaultErrorPage(const std::string &statusCode);
 
 public:
     Response(void);
-    Response(std::string const& statusCode,  std::string const& uri = "/");
-    //Response(std::string statusCode, int);
+    Response(std::string const& statusCode, std::string const &uri, const std::map<std::string, std::string>  &errorPages);
     Response(Response const &copy);
     Response &operator=(Response const &source);
     ~Response(void);
@@ -47,8 +49,6 @@ public:
     void setVery(void); // ????????
 
     void setBody(const std::string &body);
-
-    void error(const std::string &statusCode);
 
     std::string getResponse(void);
 };

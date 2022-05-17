@@ -1,16 +1,19 @@
 #include "Request.hpp"
 #include "Autoindex.hpp"
+#include "../cgi/CgiHandler.hpp"
 #define BOUNDARY_PREFIX_LEN 2
 
 Request::Request(void): _headers(std::map<std::string, std::string>()) { return; };
 
-Request::Request(Request const &copy): _method(copy._method), _uri(copy._uri), _version(copy._version), _headers(copy._headers), _body(copy._body) { return; };
+Request::Request(Request const &copy): _method(copy._method), _uri(copy._uri), _path(copy._path), _absPath(copy._absPath), _version(copy._version), _headers(copy._headers), _body(copy._body) { return; };
 
 Request& Request::operator=(Request const& source) {
     if (this != &source)
     {
         this->_method = source._method;
         this->_uri = source._uri;
+        this->_path = source._path;
+        this->_absPath = source._absPath;
         this->_version = source._version;
         this->_headers = source._headers;
         this->_body = source._body;
@@ -101,21 +104,18 @@ bool Request::getHeaders(std::string message) {
 
 Response Request::execute() {
     Response resp;
-    // size_t  point;
+    size_t  point;
     
     this->_currentLocation = this->chooseLocation();
     this->constructAbsPath();
-    // if ((point = _uri.find_last_of(".")) != std::string::npos)
-    // {
-    //     std::map<std::string, std::string> params; // maybe it isn't nesseccary and put all body to cgi
-    //     if (_uri.substr(point + 1) == _currentLocation.getCgiExtention())
-    //     {
-    //         // Cgi cgi(location, _headers);
-    //         // return Response(cgi.result());
-    //     }
-    //     else
-    //         return Response("500" , _uri); // ?????
-    // }
+    if ((point = _uri.find_last_of(".")) != std::string::npos)
+    {
+        if (_uri.substr(point + 1) == _currentLocation.getCgiExtention())
+        {
+            // Cgi cgi(location, _headers);
+            // return Response(cgi.result());
+        }
+    }
     if (_currentLocation.getRedirectionCode() != "")
         return Response(_currentLocation.getRedirectionCode(), _currentLocation.getRedirectionUrl(), _conf.getErrorPages());
 
@@ -131,87 +131,155 @@ Response Request::execute() {
 };
 
 LocationCfg Request::chooseLocation(void) {
-    LocationCfg location;
+    LocationCfg location = *(_conf.getLocations().begin());
+    size_t maxLen = 0;
+    std::string path = "";
+
     for (std::vector<LocationCfg>::const_iterator it = _conf.getLocations().begin(); it != _conf.getLocations().end(); it++)
     {
-        if (it->getPath() == "/")
-            location = *it;
-        else if (it->getPath() == this->getUri()) {
+        path = "";
+        std::string sub = _uri.substr(0, it->getPath().size());
+        if (_uri == it->getPath()) {
             location = *it;
             break;
         }
+        if (_uri.substr(0, it->getPath().size()) == it->getPath())
+        {
+            if (it->getRoot()[it->getRoot().size() - 1] == '/' && _uri[0] == '/')
+                _path = it->getRoot() + _uri.substr(1);
+            else
+                _path = it->getRoot() + _uri;
+        }
+        if (_path.size() > maxLen)
+        {
+            maxLen = _path.size();
+            location = *it;
+        }
     }
+
     return location;
 };
 
 void Request::constructAbsPath(void) {
-    std::string root = this->_currentLocation.getRoot();
-    bool isRootAbsolutePath = root[0] == '/';
+    char cwd[2048];
 
-    if (this->_uri != "/") {
-        if (isRootAbsolutePath)
-            this->_absPath = root + this->_uri.substr(1);
-        else
-            this->_absPath = "./" + root + this->_uri.substr(1);
-    }
-    else {
-        if (isRootAbsolutePath)
-            this->_absPath = root;
-        else
-            this->_absPath = "./" + root;
-    }
+    getcwd(cwd, 2048);
+    _absPath += cwd;
+    _absPath += ("/" + _path);
+    std::cout << "uri: " << _uri << " path: " << _path << " abs path: " << _absPath << std::endl;
 }
 
-Response Request::execGet(void) {
-    std::ifstream   fileStream;
+Response Request::execGet(void)
+{
+    std::fstream fs;
     Response resp;
-    std::string strh;
-    std::string fileContent;
-    std::string maxPath;
+    std::string res;
+    std::string newline;
+    std::string content;
+    struct stat buffer;
 
-    if (_isDirectory(_absPath.c_str()))
+    // return Response("500", _conf.getErrorPages(), _path);
+    res = this->_autoindex();
+    if (res == "500")
+        return Response("500", _path, _conf.getErrorPages());
+    else if (res == "404")
+        return Response("404", _path, _conf.getErrorPages());
+    else if (res != "")
+    {
+        resp.setBody(res);
+        return resp;
+    }
+    if (stat(_path.c_str(), &buffer) == -1)
+        return Response("404", _path, _conf.getErrorPages());
+    fs.open(_path);
+    if (!fs.good())
+        return Response("403", _path, _conf.getErrorPages());
+    while(!fs.eof())
+    {
+        std::getline(fs, newline);
+        content += newline;
+        if (!fs.eof())
+            content += '\n';
+    }
+    fs.close();
+    resp.setBody(content);
+    resp.setHeaders(_path);
+    return resp;
+};
+
+std::string Request::_autoindex(void)
+{
+    struct stat s;
+    std::string content = "";
+    std::string newline;
+    std::fstream fs;
+
+    if (_uri[_uri.size() - 1] == '/' || (stat(_path.c_str(), &s) == 0 && (s.st_mode & S_IFDIR)))
     {
         if (_currentLocation.getAutoIndex())
         {
-            Autoindex autoindex;
-            
-            std::string page = autoindex.createPage(this->getRoot(this->_currentLocation) + _uri, _uri);
+            std::string page = _createHtmlPage();
             if (page == "")
-                return Response("500", _uri, _conf.getErrorPages());
-            _body = page;
-            resp.setHeaders(_uri);
-            resp.setBody(_body);
-            return resp;
+                return "500";
+            return page;
         }
         else
         {
-            std::string index = _currentLocation.getIndex();
-            std::string targetFile = "./" + this->getRoot(this->_currentLocation) + index;
-            fileStream.open(targetFile);
-            if (!fileStream.is_open())
-                return Response("404", _uri, _conf.getErrorPages());
-            while(getline(fileStream, strh))
-                fileContent += strh;
-            fileContent += '\n';
-            _body = fileContent;
-            fileStream.close();
-            resp.setHeaders(_uri);
-            resp.setBody(_body);
-            return resp;
+            content = _indexFile();
+            if (content == "")
+                return "404";
         }
     }
+    return "";
+};
 
-    fileStream.open(_absPath);
+std::string Request::_createHtmlPage(void)
+{
+    DIR *dpdf;
+    struct dirent *epdf;
+    std::string page = "<!DOCTYPE html>\
+    <html>\
+    <head>\
+        <title>Index of " + this->_path + "</title>\
+    </head>\
+    <body>";
+
+    std::string relativeUri = this->_uri;
+    if (relativeUri != "/")
+        relativeUri += "/";
+    dpdf = opendir(this->_path.c_str());
+    if (dpdf != NULL)
+    {
+        page += "\t<ul>";
+        while ((epdf = readdir(dpdf)))
+            page += "\t\t<li><a href=\"" + relativeUri + std::string(epdf->d_name) + "\">" + std::string(epdf->d_name) + "</a></li>\n";
+        page += "\t</ul>";
+    }
+
+    page += "</body>\n</html>";
+    closedir(dpdf);
+    return page;
+};
+
+std::string Request::_indexFile(void)
+{
+    std::ifstream fileStream;
+    std::string content = "";
+    std::string newline;
+
+    std::string index = _currentLocation.getIndex();
+    std::fstream f(_currentLocation.getRoot() + index);
+    _path += _currentLocation.getIndex();
+    _absPath += _currentLocation.getIndex();
+    fileStream.open(_path);
     if (!fileStream.is_open())
-        return Response("404", _uri, _conf.getErrorPages());
-    while(getline(fileStream, strh))
-        fileContent += strh;
-    fileContent += '\n';
-    _body = fileContent;
+        return "";
+    while(getline(fileStream, newline))
+        content += newline;
+    content += '\n';
+    _body = content;
     fileStream.close();
-    resp.setHeaders(_uri);
-    resp.setBody(_body);
-    return resp;
+    return content;
 };
 
 Response Request::execPost(void) {
@@ -332,13 +400,6 @@ bool Request::_isDirectory(const char *path) {
        return (statbuf.st_mode & S_IFDIR);
    return false;
 }
-
-std::string myToLower(const std::string &str) {
-    std::string res;
-    for (size_t i = 0; i < str.size(); i++)
-        res[i] = std::tolower(str[i]);
-    return res;
-};
 
 std::ostream& operator<<(std::ostream &out, Request request) {
     out << request.getRequest();

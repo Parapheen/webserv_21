@@ -42,7 +42,7 @@ void TCPServer::_bind(void) {
 }
 
 void TCPServer::_listen(void) {
-    if (listen(this->_socketfd, 10) < 0) // number of connections
+    if (listen(this->_socketfd, 100) < 0) // number of connections
         throw std::system_error(EFAULT, std::generic_category());
     std::cout << "Listening... " << this->_socketfd << " " << this->_config.getPort() << std::endl;
 }
@@ -65,6 +65,5 @@ const int   &TCPServer::getSocketFd(void) const { return this->_socketfd; }
 const ServerCfg &TCPServer::getServerConfig(void) const { return this->_config; }
 
 TCPServer::~TCPServer(void) {
-    // cleanup, perhaps closing connections
     close(this->_socketfd);
 }

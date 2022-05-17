@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <fstream>
 #include <cstdio>
+#include <unistd.h>
+#include <dirent.h>
 #include "../parser/ServerCfg.hpp"
 
 struct config {
@@ -16,8 +18,11 @@ class Request
 {
 private:
     std::string                         _method;
+
     std::string                         _uri;
+    std::string                         _path;
     std::string                         _absPath;
+
     std::string                         _version;
     std::map<std::string, std::string>  _headers;
     std::string                         _body;
@@ -34,6 +39,9 @@ private:
     std::string   _getFormDataBoundaryName(void);
     std::string  _getFormDataFileName(const size_t &offset);
     std::string  _getFormDataFileContent(const std::string &boundaryName, const size_t &offset);
+    std::string _autoindex(void);
+    std::string _indexFile(void);
+    std::string _createHtmlPage(void);
 
 public:
     Request(void);
@@ -76,5 +84,3 @@ public:
 };
 
 std::ostream& operator<<(std::ostream &out, Request &request);
-
-std::string myToLower(const std::string &str);

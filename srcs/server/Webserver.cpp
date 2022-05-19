@@ -1,72 +1,94 @@
 #include "Webserver.hpp"
 
-Webserver::Webserver(void) {
-    this->_serversManager = new ServersManager(this->_eventLoop);
-    this->_clientsManager = new ClientsManager(this->_eventLoop);
-    return ;
-}
+Webserver::Webserver(void) : _serversManager(new ServersManager(this->_eventLoop)),
+    _clientsManager(new ClientsManager(this->_eventLoop)) { return ; }
 
-Webserver::Webserver(const Webserver &instance) {
-    *this = instance;
+Webserver::Webserver(const Webserver &instance) : _eventLoop(instance._eventLoop), _serversManager(instance._serversManager), _clientsManager(instance._clientsManager) {
     return ;
 }
 
 Webserver &Webserver::operator=(const Webserver &rhs) {
-    // TODO: finish here
-    (void) rhs;
+    if (this != &rhs) {
+        this->_eventLoop = rhs._eventLoop;
+        this->_serversManager = rhs._serversManager;
+        this->_clientsManager = rhs._clientsManager;
+    }
     return *this;
 }
 
 void    Webserver::handleEvent(const struct kevent &event) {
     // event socket equals to one of the server => new client
-    if (this->_serversManager->getServerBySocket(event.ident)) {
-        try {
-            Client *newClient = this->_clientsManager->createNewClient(event.ident);
-            this->_clientsManager->addClient(event.ident, newClient);
-        }
-        catch(const std::exception& e) {
-            throw e;
-        }
+    if (TCPServer *server = this->_serversManager->getServerBySocket(event.ident)) {
+        Client *newClient = this->_clientsManager->createNewClient(event.ident);
+        this->_clientsManager->addClient(server, newClient);
     } // disconnected
     else if (event.flags & EV_EOF) {
-        try {
-            this->_clientsManager->removeClient(event.ident);
-        }
-        catch(const std::exception& e) {
-            throw e;
-        }
+        this->_clientsManager->removeClient(event.ident);
     } // read message from client
-    else if (event.filter == EVFILT_READ) {
-        // process http request
-        char buf[2048];
-        int bytes_read = recv(event.ident, buf, sizeof(buf) - 1, 0);
-        buf[bytes_read] = 0;
-        printf("client at socketfd %lu: %s", event.ident, buf);
-        // this->_clientsManager->removeClient(event.ident);
+    else if (event.filter == EVFILT_READ || event.filter == EVFILT_WRITE) {
+        // chunked reading
+        this->_handleIO(event);
+    }
+    else
+        this->_clientsManager->removeClient(event.ident);
+}
+
+void    Webserver::_handleIO(const struct kevent &event) {
+    if (event.filter == EVFILT_READ)
+        this->_handleRead(event);
+    else if (event.filter == EVFILT_WRITE)
+        this->_handleWrite(event);
+}
+
+void    Webserver::_handleRead(const struct kevent &event) {
+    char buf[event.data];
+    int recvRet;
+
+    recvRet = recv(event.ident, buf, sizeof(buf), 0);
+    if (recvRet == 0) {
+        this->_clientsManager->removeClient(event.ident);
+        return;
+    }
+    else if (recvRet == -1) {
+        this->_clientsManager->removeClient(event.ident);
+        return;
+    }
+    printf("client at socketfd %lu: %s", event.ident, buf);
+    ServerCfg server = this->_clientsManager->getServerByClientFd(event.ident)->getServerConfig();
+    Request request = this->_clientsManager->getRequestByClientFd(event.ident);
+    request.setConfig(server);
+    request.setRawRequest(buf, recvRet);
+    REQUEST_STATE retStatus = request.collectRequest();
+    this->_clientsManager->setRequestToClient(event.ident, request);
+    if (retStatus == DONE) {
+        Response response = request.parse();
+        this->_clientsManager->setResponseToClient(event.ident, response);
+        this->_clientsManager->writeToClient(event.ident);
     }
 }
 
-void    Webserver::run(void) {
-    // init servers
-    TCPServer   *serverOne = new TCPServer(this->_eventLoop.getEventLoop(), 8088);
-    TCPServer   *serverTwo = new TCPServer(this->_eventLoop.getEventLoop(), 8089);
-    const int   evSize = this->_eventLoop.getEventListSize(); 
-    struct kevent eventList[evSize];
+void    Webserver::_handleWrite(const struct kevent &event) {
+    Response response = this->_clientsManager->getResponseByClientFd(event.ident);
+    std::string responseStr = response.getResponse();
 
-    this->_serversManager->addServer("serverOne", serverOne);
-    this->_serversManager->addServer("serverTwo", serverTwo);
+    std::cout << responseStr << std::endl;
+    send(event.ident, responseStr.c_str(), strlen(responseStr.c_str()), 0);
+    this->_clientsManager->removeClient(event.ident);
+}
+
+void    Webserver::run(const std::vector<ServerCfg> &servers) {
+    const int       evSize = this->_eventLoop.getEventListSize(); 
+    struct kevent   eventList[evSize];
+
+    memset(&eventList, 0, sizeof(eventList));
+    this->_serversManager->init(servers);
     while (true) {
         int num_events = kevent(this->_eventLoop.getEventLoop(), NULL, 0, eventList, evSize, NULL);
-        for (int i = 0; i < num_events; i++) {
-            int eventSocket = (int)eventList[i].ident;
-            std::cout << "Event socket: " << eventSocket << std::endl;
+        if (num_events == -1)
+            throw std::system_error(EFAULT, std::generic_category());
+        for (int i = 0; i < num_events; i++)
             this->handleEvent(eventList[i]);
-        }
     }
 }
 
-Webserver::~Webserver(void) {
-    delete this->_serversManager;
-    delete this->_clientsManager;
-    return ;
-}
+Webserver::~Webserver(void) { return ; }

@@ -1,36 +1,33 @@
-COLOR_RED		= 		"\033[0;31m"
-COLOR_GREEN		= 		"\033[0;32m"
-COLOR_RESET		= 		"\033[0m"
+CC = clang++
+FLAGS = -std=c++98 -Wall -Wextra -Werror -g -MMD
 
-NAME			=		webserv
+OBJ = $(SRCS:.cpp=.o)
+RM = rm -f
+NAME = webserver
 
 SRCS 			=		srcs/main.cpp srcs/server/TCPServer.cpp srcs/server/ClientsManager.cpp \
 						srcs/server/ServersManager.cpp srcs/server/Client.cpp \
-						srcs/server/Webserver.cpp srcs/server/EventLoop.cpp
+						srcs/server/Webserver.cpp srcs/server/EventLoop.cpp \
+						srcs/parser/Lexer.cpp srcs/parser/Parser.cpp srcs/parser/ServerCfg.cpp \
+						srcs/parser/LocationCfg.cpp srcs/http/Request.cpp srcs/http/Response.cpp \
+						srcs/http/Autoindex.cpp srcs/cgi/CgiHandler.cpp
 
-OBJS			=		${SRCS:.cpp=.o}
+%.o: %.cpp
+	$(CC) $(FLAGS) -c $< -o $@
 
-CLANG 			=		clang++
+$(NAME): $(OBJ)
+	$(CC) -o $(NAME) $(OBJ)
 
-CPPFLAGS		=		-Wall -Wextra -Werror -MMD -std=c++98
+-include $(SRCS:.cpp=.d)
 
-CLEAN			=		rm -f
-
-all:		${NAME}
-
-${NAME}:	${OBJS}
-			@echo ${COLOR_GREEN}Creating ${NAME}...${COLOR_RESET}
-			@${CLANG} -o ${NAME} ${OBJS}
-
--include	${SRCS:.cpp=.d}
+all: $(NAME)
 
 clean:
-			@echo ${COLOR_RED}Cleaning...${COLOR_RESET}
-			${RM} ${OBJS} ${SRCS:.cpp=.d}
+	$(RM) $(OBJ) $(SRCS:.cpp=.d)
 
-fclean:		clean
-			${CLEAN} ${NAME}
+fclean: clean
+	$(RM) $(NAME)
 
-re:			fclean all
+re: fclean all
 
-.PHONY:		all clean fclean re
+.PHONY: clean fclean all re

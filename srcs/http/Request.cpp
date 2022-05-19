@@ -43,6 +43,8 @@ const std::string                           &Request::getRoot(const LocationCfg 
 };
 const std::map<std::string, std::string>    &Request::getHeaders(void) const { return this->_headers; };
 const ServerCfg                             &Request::getConfig() const { return this->_conf; };
+const LocationCfg                           &Request::getCurrentLocation() const { return this->_currentLocation; };
+const std::string                           &Request::getPath() const { return this->_path; };
 
 void Request::setMethod(const std::string &method) { this->_method = method; };
 void Request::setUri(const std::string &uri) { this->_uri = uri; };
@@ -219,15 +221,23 @@ bool Request::getHeaders(std::string message) {
 Response Request::execute() {
     Response resp;
     size_t  point;
+    std::string cgiResponse;
     
     this->_currentLocation = this->chooseLocation();
     this->constructAbsPath(false);
     if ((point = _uri.find_last_of(".")) != std::string::npos)
     {
-        if (_uri.substr(point + 1) == _currentLocation.getCgiExtention())
+        if (_uri.substr(point) == _currentLocation.getCgiExtention())
         {
-            // Cgi cgi(location, _headers);
-            // return Response(cgi.result());
+            CGI_handler cgi = CGI_handler();
+            try {
+                cgiResponse = cgi.create_response(*this);
+                _body = cgiResponse;
+                return Response("200", _uri, _conf.getErrorPages());
+            }
+            catch (const std::exception& e) {
+                return Response(e.what(), _uri, _conf.getErrorPages());
+            }
         }
     }
     if (_currentLocation.getRedirectionCode() != "")

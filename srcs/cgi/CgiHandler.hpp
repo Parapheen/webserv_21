@@ -2,22 +2,52 @@
 #include "../parser/ServerCfg.hpp"
 #include "../http/Request.hpp"
 #include "../http/Response.hpp"
+#include <fcntl.h>
+#define BIN_PATH "uploader.cgi"
 
-class CgiHandler {
+class CGI_handler {
+public:
+
+    CGI_handler(void);
+
+    std::string create_response(Request &request);
+
+    class ResourceError : public std::exception{
+        const char *what() const throw() {
+            return ("500");
+        }
+    };
+
+    class ForkError : public std::exception{
+        const char *what() const throw() {
+            return ("500");
+        }
+    };
+
+    class ExecveError : public std::exception{
+        const char *what() const throw() {
+        return ("500");
+        }
+    };
+
+    class PayLoadError : public std::exception{
+        const char *what() const throw() {
+            return ("413");
+        }
+    };
+
+    class IncorrectResponseError : public std::exception{
+        const char *what() const throw() {
+            return ("500");
+        }
+    };
+
     private:
-        std::string _binPath;
+        char **create_argv() const;
+        char **create_envp(Request &request) const;
 
-        ServerCfg   _config;
-        LocationCfg _location;
-        Request     _request;
-
-    public:
-        CgiHandler(void);
-        CgiHandler(const CgiHandler &instance);
-
-        CgiHandler  &operator=(const CgiHandler &rhs);
-
-        ~CgiHandler(void);
-
-        Response    getResponse(void);
+        std::string script_path_;
+        LocationCfg location;
+        std::string rel_path;
+        std::string extention;
 };

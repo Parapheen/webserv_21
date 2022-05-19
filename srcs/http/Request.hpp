@@ -77,6 +77,8 @@ public:
     const std::map<std::string, std::string>    &getHeaders(void) const;
     const ServerCfg                             &getConfig(void) const;
     bool                                        getHeaders(std::string message);
+    const LocationCfg                           &getCurrentLocation(void) const;
+    const std::string                           &getPath(void) const;
 
     void    setMethod(const std::string &method);
     void    setUri(const std::string &uri);

@@ -21,9 +21,11 @@ class Client {
 
         const int       &getSocketFd(void) const;
         const Response  &getResponse(void) const;
+        const Request   &getRequest(void) const;
 
         void            setSocketFd(const int &fd);
         void            setResponse(const Response &response);
+        void            setRequset(const Request &request);
 };
 
 std::ostream &operator<<(std::ostream &o, Client &instance);

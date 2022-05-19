@@ -66,6 +66,7 @@ T *Manager<T>::getOne(const int &key) {
 
 template <class T>
 void Manager<T>::removeOne(const int &key) {
+    delete this->_elements[key];
     this->_elements.erase(key);
 }
 

@@ -10,13 +10,25 @@
 #include <dirent.h>
 #include "../parser/ServerCfg.hpp"
 
-struct config {
-    std::string cgiExpansion;
+enum REQUEST_STATE {
+    EMPTY,
+    IS_FIRST_LINE,
+    IS_HEADERS,
+    IS_BODY,
+    DONE,
+    ERROR,
+    NOT_FULL_CHUNK
 };
 
-class Request
-{
+enum CHUNKED_STATE {
+    NOT_CHUNKED,
+    PROGRESS_CHUNKED,
+    FINISH_CHUNKED
+};
+
+class Request {
 private:
+    std::string                         _rawRequest;
     std::string                         _method;
 
     std::string                         _uri;
@@ -32,6 +44,13 @@ private:
 
     ServerCfg                           _conf;
     LocationCfg                         _currentLocation;
+
+    std::string                         _cgiResponse;
+    REQUEST_STATE                       _status;
+    std::string                         _error;
+    std::string                         _parsingFirstLine;
+    std::string                         _parsingHeaders;
+    std::string                         _parsingBody;
 
     bool    _isDirectory(const char *path);
     Response _handleFormData(void);
@@ -65,9 +84,11 @@ public:
     void    setBody(const std::string &body);
     void    setHeaders(const std::map<std::string, std::string> &headers);
     void    setConfig(const ServerCfg &config);
+    void    setRawRequest(const char *message, const int &len);
 
-    Response parse(const std::string &message);
-    void    initPort(void);
+    REQUEST_STATE collectRequest(void);
+    Response parse(void);
+    bool isChunked(std::string const& buffer);
     void parseUri(void);
     Response execute(void);
     Response execGet(void);
@@ -76,11 +97,9 @@ public:
 
     std::string parseFirstLine(std::string firstLine);
     LocationCfg chooseLocation(void);
-    void    constructAbsPath(void);
-    //void printRequest(Request req);
-    // bool checkRediretion(LocationCfg const& location);
+    void    constructAbsPath(bool isIndex);
     std::string getRequest(void);
-
+    std::string nextLine(std::string const& text);
 };
 
 std::ostream& operator<<(std::ostream &out, Request &request);

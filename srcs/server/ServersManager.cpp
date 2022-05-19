@@ -41,6 +41,8 @@ void    ServersManager::addServer(const std::string &serverName, TCPServer *serv
 
 void ServersManager::init(const std::vector<ServerCfg> &servers) {
     for(size_t i = 0; i < servers.size(); i++) {
+        if (this->_servers.find(servers[i].getName()) != this->_servers.end())
+            continue;
         TCPServer *newServ = new TCPServer(this->_eventLoop.getEventLoop(), servers[i]);
         this->addServer(servers[i].getName(), newServ);
     }

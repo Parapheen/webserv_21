@@ -55,11 +55,16 @@ void    Webserver::_handleRead(const struct kevent &event) {
     }
     printf("client at socketfd %lu: %s", event.ident, buf);
     ServerCfg server = this->_clientsManager->getServerByClientFd(event.ident)->getServerConfig();
-    Request request = Request();
+    Request request = this->_clientsManager->getRequestByClientFd(event.ident);
     request.setConfig(server);
-    Response response = request.parse(buf);
-    this->_clientsManager->setResponseToClient(event.ident, response);
-    this->_clientsManager->writeToClient(event.ident);
+    request.setRawRequest(buf, recvRet);
+    REQUEST_STATE retStatus = request.collectRequest();
+    this->_clientsManager->setRequestToClient(event.ident, request);
+    if (retStatus == DONE) {
+        Response response = request.parse();
+        this->_clientsManager->setResponseToClient(event.ident, response);
+        this->_clientsManager->writeToClient(event.ident);
+    }
 }
 
 void    Webserver::_handleWrite(const struct kevent &event) {
@@ -67,8 +72,7 @@ void    Webserver::_handleWrite(const struct kevent &event) {
     std::string responseStr = response.getResponse();
 
     std::cout << responseStr << std::endl;
-    if (send(event.ident, responseStr.c_str(), strlen(responseStr.c_str()), 0) < 0)
-        this->_clientsManager->removeClient(event.ident);
+    send(event.ident, responseStr.c_str(), strlen(responseStr.c_str()), 0);
     this->_clientsManager->removeClient(event.ident);
 }
 

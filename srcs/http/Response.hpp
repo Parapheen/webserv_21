@@ -10,7 +10,6 @@
 class Response
 {
 private:
-    //const static std::string _version = "HTTP/1.1";
     std::string                         _version;
     std::string                         _statusCode;
     std::map<std::string, std::string>  _headers;

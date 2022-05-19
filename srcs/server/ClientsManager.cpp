@@ -58,8 +58,16 @@ void ClientsManager::setResponseToClient(const int &fd, const Response &response
     this->getClient(fd)->setResponse(response);
 }
 
+void ClientsManager::setRequestToClient(const int &fd, const Request &request) {
+    this->getClient(fd)->setRequset(request);
+}
+
 const Response   &ClientsManager::getResponseByClientFd(const int &fd) {
     return this->getClient(fd)->getResponse();
+}
+
+const Request   &ClientsManager::getRequestByClientFd(const int &fd) {
+    return this->getClient(fd)->getRequest();
 }
 
 void ClientsManager::removeClient(const int &fd) {

@@ -187,12 +187,8 @@ std::string Response::getResponse(void)
 
         while(getline(fileStream, fileContent))
             _body += fileContent;
-        _body += '\n';
         fileStream.close();
         response += ("\r\n" + _body + "\r\n");
-    }
-    else if (this->_hasDefaultErrorPage(this->_statusCode)) {
-
     }
     // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include a message body
     else if (!(_statusCode == "204" || _statusCode == "304" || _statusCode[0] == '1'))
@@ -206,6 +202,7 @@ bool    Response::_hasDefaultErrorPage(const std::string &statusCode) {
     while (it != this->_errorPages.end()) {
         if (it->first == statusCode)
             return true;
+        it++;
     }
     return false;
 }

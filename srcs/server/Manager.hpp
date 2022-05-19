@@ -6,17 +6,18 @@
 template <class T>
 class Manager {
     private:
-        std::map<int, T *>    _elements; // usually would contain fd and eventType / server / client
+        std::map<int, T *>          _elements; // usually would contain fd and eventType / server / client
 
     protected:
         EventLoop                   _eventLoop; // kevent loop
 
         void                        addOne(const int &key, T *el);
         const std::map<int, T *>    &getAll(void) const;
-        const T                     *getOne(const int &key) const;
+        T                           *getOne(const int &key);
         void                        removeOne(const int &key);
     
     public:
+        Manager(void);
         Manager(const EventLoop &eventLoop);
 
         Manager(const Manager &instance);
@@ -25,18 +26,20 @@ class Manager {
 };
 
 template <class T>
+Manager<T>::Manager(void) { return ; }
+
+template <class T>
 Manager<T>::Manager(const EventLoop &eventLoop) : _eventLoop(eventLoop) { return ; }
 
 template <class T>
-Manager<T>::Manager(const Manager &instance) {
-    *this = instance;
-    return;
-}
+Manager<T>::Manager(const Manager &instance) : _elements(instance._elements) { return ; }
 
 template <class T>
 Manager<T> &Manager<T>::operator=(const Manager &rhs) {
-    if (this->getAll() != rhs.getAll())
-        this->_elements = rhs._elements;
+    if (this != &rhs) {
+        for (size_t i = 0; i < rhs._elements.size(); i++)
+            this->_elements[i] = rhs._elements[i];
+    }
     return *this;
 }
 
@@ -52,7 +55,7 @@ const std::map<int, T *>    &Manager<T>::getAll(void) const {
 }
 
 template <class T>
-const T *Manager<T>::getOne(const int &key) const {
+T *Manager<T>::getOne(const int &key) {
     try {
         return this->_elements.at(key);
     }
@@ -67,4 +70,12 @@ void Manager<T>::removeOne(const int &key) {
 }
 
 template <class T>
-Manager<T>::~Manager(void) { return; }
+Manager<T>::~Manager(void) {
+    typename std::map<int, T *>::iterator it = this->_elements.begin();
+    while (it != this->_elements.end()) {
+        if (it->second)
+            delete it->second;
+        ++it;
+    }
+    return;
+}

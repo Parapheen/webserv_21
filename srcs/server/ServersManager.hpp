@@ -13,6 +13,7 @@ class ServersManager : public Manager<TCPServer> {
         std::map<std::string, TCPServer *>    _servers; // name: server instance
 
     public:
+        ServersManager(void);
         ServersManager(const EventLoop &eventLoop);
         ServersManager(const ServersManager &instance);
 
@@ -25,10 +26,11 @@ class ServersManager : public Manager<TCPServer> {
         // human readable wrappers over Manager methods
         void                                addSocket(const int &fd, TCPServer *server);
         const std::map<int, TCPServer *>    &getSockets(void) const;
-        const TCPServer                     *getServerBySocket(const int &fd) const;
+        TCPServer                           *getServerBySocket(const int &fd);
         void                                removeSocket(const int &fd);
 
         void                                addServer(const std::string &serverName, TCPServer *server);
+        void                                init(const std::vector<ServerCfg> &servers);
 };
 
 std::ostream &operator<<(std::ostream &o, ServersManager &instance);

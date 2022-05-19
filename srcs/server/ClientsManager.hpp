@@ -9,9 +9,12 @@
 #include <sys/time.h>
 #include <iostream>
 #include "Client.hpp"
+#include "TCPServer.hpp"
 #include "Manager.hpp"
 
 class ClientsManager : public Manager<Client> {
+    private:
+        std::map<int, TCPServer *>  _client_server_map;
     public:
         ClientsManager(const EventLoop &eventLoop);
         ~ClientsManager(void);
@@ -23,9 +26,13 @@ class ClientsManager : public Manager<Client> {
 
         // wrappers over manager methods
         const std::map<int, Client *>       &getClients(void) const;
-        const Client                        *getClient(const int &fd);
-        void                                addClient(const int &fd, Client *client);
+        Client                              *getClient(const int &fd);
+        TCPServer                           *getServerByClientFd(const int &fd);
+        const Response                      &getResponseByClientFd(const int &fd);
+        void                                addClient(TCPServer *server, Client *client);
+        void                                writeToClient(const int &fd);
         void                                removeClient(const int &fd);
+        void                                setResponseToClient(const int &fd, const Response &response);
 };
 
 std::ostream &operator<<(std::ostream &o, ClientsManager &instance);

@@ -338,7 +338,7 @@ std::string Request::_autoindex(void)
     std::string newline;
     std::fstream fs;
 
-    if (_uri[_uri.size() - 1] == '/' || (stat(_path.c_str(), &s) == 0 && (s.st_mode & S_IFDIR)))
+    if (stat(_path.c_str(), &s) != -1 && S_ISDIR(s.st_mode))
     {
         if (_currentLocation.getAutoIndex())
         {
@@ -370,7 +370,7 @@ std::string Request::_createHtmlPage(void)
     <body>";
 
     std::string relativeUri = this->_uri;
-    if (relativeUri != "/")
+    if (relativeUri != "/" && relativeUri[relativeUri.size() - 1] != '/')
         relativeUri += "/";
     dpdf = opendir(this->_path.c_str());
     if (dpdf == NULL)

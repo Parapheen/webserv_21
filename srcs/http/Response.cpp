@@ -5,11 +5,10 @@ Response::Response(void):
 {
     initHeaders();
     initStatusMessages();
-    //setHeaders(); // ???? uri is need, but what is uri for nothing?? maybe there no default constructor??
 };
 
 Response::Response(Response const& copy):
-    _version(copy._version), _statusCode(copy._statusCode), _headers(copy._headers), _body(copy._body), _statusMessages(copy._statusMessages), _errorPages(copy._errorPages)
+    _version(copy._version), _cgi_response(copy._cgi_response), _statusCode(copy._statusCode), _headers(copy._headers), _body(copy._body), _statusMessages(copy._statusMessages), _errorPages(copy._errorPages)
 {
     initHeaders();
     initStatusMessages();
@@ -37,6 +36,7 @@ Response& Response::operator=(Response const& source)
         _body = source._body;
         _statusMessages = source._statusMessages;
         _errorPages = source._errorPages;
+        _cgi_response = source._cgi_response;
     }
     return *this;
 };
@@ -54,8 +54,8 @@ void Response::initStatusMessages()
     _statusMessages["307"] = "Temporary Redirect";
     _statusMessages["308"] = "Permanent Redirect";
     _statusMessages["400"] = "Bad Request";
-    _statusMessages["401"] = "Unauthorized"; // ??
-    _statusMessages["402"] = "Payment Required"; // ??
+    _statusMessages["401"] = "Unauthorized";
+    _statusMessages["402"] = "Payment Required"; 
     _statusMessages["403"] = "Forbidden";
     _statusMessages["404"] = "Not Found";
     _statusMessages["405"] = "Method Not Allowed";
@@ -78,11 +78,9 @@ void Response::setHeaders(const std::string &uri)
     if (_statusCode[0] == '3')
         setLocation(uri);
     else
-        setContentLocation(uri); // is it correct? 
+        setContentLocation(uri); 
     setLastModified(uri);
     setRetryAfter();
-    // setTransferEncoding(); // ????
-    // setWwwAuthenticate(); // ???? 
 };
 
 void Response::setDate()
@@ -100,7 +98,6 @@ void Response::setContentType(const std::string &file)
     std::string exp;
     if (dot != std::string::npos)
     {
-        //switch
         exp = file.substr(dot + 1);
         if (exp == "html")
             _headers["Content-Type"] = "text/html";
@@ -159,11 +156,6 @@ void Response::setRetryAfter(void)
         _headers["Retry-After"] = "10";
 };
 
-// void Response::setTransferEncoding()
-// {
-
-// };
-
 void Response::setWwwAuthenticate(void)
 {
     if (_statusCode == "401")
@@ -175,6 +167,8 @@ void Response::setWwwAuthenticate(void)
 std::string Response::getResponse(void)
 {
     std::string response = "";
+    if (_cgi_response.size())
+        return _cgi_response;
     response += (_version + " " + _statusCode + " " + _statusMessages[_statusCode] + "\r\n");
     for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); it++)
         response += (it->first + ": " + it->second + "\r\n");
@@ -187,14 +181,9 @@ std::string Response::getResponse(void)
 
         while(getline(fileStream, fileContent))
             _body += fileContent;
-        _body += '\n';
         fileStream.close();
         response += ("\r\n" + _body + "\r\n");
     }
-    else if (this->_hasDefaultErrorPage(this->_statusCode)) {
-
-    }
-    // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include a message body
     else if (!(_statusCode == "204" || _statusCode == "304" || _statusCode[0] == '1'))
         response += ("\r\n" + _body + "\r\n");
     return response;
@@ -206,11 +195,20 @@ bool    Response::_hasDefaultErrorPage(const std::string &statusCode) {
     while (it != this->_errorPages.end()) {
         if (it->first == statusCode)
             return true;
+        it++;
     }
     return false;
 }
 
-void Response::setBody(const std::string &body) { this->_body = body; };
+void Response::setBody(const std::string &body) { this->_body = body; }
+
+void Response::setCgiResponse(const std::string &cgiResponse) {
+    _cgi_response = cgiResponse;
+}
+
+const std::string &Response::getCgiResponse() const {
+    return _cgi_response;
+};
 
 std::ostream& operator<<(std::ostream &out, Response &response)
 {

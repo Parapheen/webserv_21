@@ -5,6 +5,7 @@ ServerCfg::ServerCfg(void) : _port(8000), _name("localhost"), _root("www/"), _er
     this->_errorPages["500"] = "www/error_pages/500.html";
     this->_errorPages["404"] = "www/error_pages/404.html";
     this->_errorPages["405"] = "www/error_pages/405.html";
+    this->_errorPages["400"] = "www/error_pages/400.html";
     return;
 }
 

@@ -1,15 +1,18 @@
 #include "Request.hpp"
-#include "Autoindex.hpp"
-#include "../CGI/CGI_handler.hpp"
+#include "../cgi/CgiHandler.hpp"
 #define BOUNDARY_PREFIX_LEN 2
 
-Request::Request(void): _headers(std::map<std::string, std::string>()) { return; };
+Request::Request(void): _method("GET"), _headers(std::map<std::string, std::string>()), _status(EMPTY) { return; };
 
-Request::Request(Request const &copy): _method(copy._method), _uri(copy._uri), _path(copy._path), _absPath(copy._absPath), _version(copy._version), _headers(copy._headers), _body(copy._body) { return; };
+Request::Request(Request const &copy): _rawRequest(copy._rawRequest), _method(copy._method), _uri(copy._uri), _path(copy._path),
+    _absPath(copy._absPath), _version(copy._version), _headers(copy._headers), _body(copy._body),
+    _status(copy._status), _parsingFirstLine(copy._parsingFirstLine), _parsingHeaders(copy._parsingHeaders),
+    _parsingBody(copy._parsingBody) { return; };
 
 Request& Request::operator=(Request const& source) {
     if (this != &source)
     {
+        this->_rawRequest = source._rawRequest;
         this->_method = source._method;
         this->_uri = source._uri;
         this->_path = source._path;
@@ -17,6 +20,10 @@ Request& Request::operator=(Request const& source) {
         this->_version = source._version;
         this->_headers = source._headers;
         this->_body = source._body;
+        this->_status = source._status;
+        this->_parsingFirstLine = source._parsingFirstLine;
+        this->_parsingHeaders = source._parsingHeaders;
+        this->_parsingBody = source._parsingBody;
     }
     return *this;
 };
@@ -35,6 +42,8 @@ const std::string                           &Request::getRoot(const LocationCfg 
 };
 const std::map<std::string, std::string>    &Request::getHeaders(void) const { return this->_headers; };
 const ServerCfg                             &Request::getConfig() const { return this->_conf; };
+const LocationCfg                           &Request::getCurrentLocation() const { return this->_currentLocation; };
+const std::string                           &Request::getPath() const { return this->_path; };
 
 void Request::setMethod(const std::string &method) { this->_method = method; };
 void Request::setUri(const std::string &uri) { this->_uri = uri; };
@@ -42,25 +51,130 @@ void Request::setVersion(const std::string &version) { this->_version = version;
 void Request::setBody(const std::string &body) { this->_body = body; };
 void Request::setHeaders(const std::map<std::string, std::string> &headers) { this->_headers = headers; };
 void Request::setConfig(ServerCfg const& config) { this->_conf = config; };
+void Request::setRawRequest(const char *message, const int &len) {
+    this->_rawRequest.append(message, message + len);
+}
 
-Response Request::parse(const std::string &message) {
+REQUEST_STATE Request::collectRequest(void)
+{
+    size_t pos;
+
+    if (_status == EMPTY || _status == IS_FIRST_LINE)
+    {
+        pos = _rawRequest.find("\r\n");
+        if (pos == std::string::npos)
+        {
+            _parsingFirstLine += _rawRequest;
+            _status = IS_FIRST_LINE;
+        }
+        else
+        {
+            _parsingFirstLine += _rawRequest.substr(0, pos);
+            if ((_error = parseFirstLine(_parsingFirstLine)) != "")
+                return ERROR;
+            _parsingHeaders = _rawRequest.substr(pos + 2);
+            _status = IS_HEADERS;
+        }
+    }
+    if (_status == IS_HEADERS)
+    {
+        pos = _rawRequest.find("\r\n\r\n");
+        if (pos == std::string::npos)
+        {
+            _parsingHeaders += _rawRequest;
+            _status = IS_HEADERS;
+        }
+        else
+        {
+            _parsingBody = _rawRequest.substr(pos + 4);
+            _status = IS_BODY;
+        }
+    }
+    if (_status == IS_BODY || _status == NOT_FULL_CHUNK)
+    {
+        if (_headers.find("Transfer-Encoding") == _headers.end())
+        {
+            size_t length = std::atoi(_headers.find("Content-Length")->second.c_str()); // headers should contain this flied, but if not?
+            if (length > _rawRequest.size())
+            {
+                _parsingBody += _rawRequest.substr(0, length);
+                _headers["Content-Length"] = length - _rawRequest.size();
+                _status = IS_BODY;
+            }
+            else
+            {
+                _parsingBody += _rawRequest.substr(0, length);
+                _status = DONE;
+            }
+        }
+        else
+        {
+            size_t bitsNum = 0;
+            std::string newline;
+
+            _parsingBody += _rawRequest;
+            newline = nextLine(_parsingBody);
+            while (newline != "")
+            {
+                if (_status == NOT_FULL_CHUNK)
+                    _body += newline;
+                else
+                {
+                    _parsingBody = _parsingBody.substr(newline.size());
+                    if (std::atoi(newline.c_str()) != 0)
+                        bitsNum = std::atoi(newline.c_str());
+                    if (std::atoi(newline.c_str()) == 0 && newline != "0")
+                    {
+                        if (bitsNum <= newline.size())
+                        {
+                            _body += newline.substr(0, bitsNum);
+                            bitsNum = 0;
+                        }
+                        else
+                            _status = NOT_FULL_CHUNK;
+                    }
+                    else if (std::atoi(newline.c_str()) == 0 && newline == "0")
+                        _status = DONE;
+                }
+                _parsingBody = _parsingBody.substr(newline.size());
+                newline = nextLine(_parsingBody);
+            }
+        }
+    }
+    return _status;
+};
+
+std::string Request::nextLine(std::string const& text)
+{
+    std::string str;
+    size_t pos;
+
+    pos = text.find("\r\n");
+    if (pos == std::string::npos)
+        return text;
+    str = text.substr(0, pos);
+    return str;
+};
+
+Response Request::parse(void) {
     std::string error = "";
 
-    if (message.find("\r\n") == std::string::npos)
-        return Response("400", _uri, _conf.getErrorPages());
-    if ((error = parseFirstLine(message.substr(0, message.find("\r\n")))) != "")
+    if (_rawRequest.find("\r\n") == std::string::npos)
+        return Response("400", "", _conf.getErrorPages());
+    if ((error = parseFirstLine(_rawRequest.substr(0, _rawRequest.find("\r\n")))) != "")
         return Response(error, _uri, _conf.getErrorPages());
-    if (message.find("\r\n\r\n") == std::string::npos)
+    if (_rawRequest.find("\r\n\r\n") == std::string::npos || _rawRequest.substr(_rawRequest.find("\r\n\r\n")) == "")
     {
-        if (message.find("\r\n") == std::string::npos)
+        if (_rawRequest.find("\r\n") == std::string::npos)
             return Response("400", _uri, _conf.getErrorPages());
-        getHeaders(message.substr(message.find("\r\n") + 2));
+        else
+            getHeaders(_rawRequest.substr(_rawRequest.find("\r\n") + 2));
     }
     else
     {
-        if (getHeaders(message.substr(message.find("\r\n") + 2, message.find("\r\n\r\n") - message.find("\r\n"))))
+        if (getHeaders(_rawRequest.substr(_rawRequest.find("\r\n") + 2, _rawRequest.find("\r\n\r\n") - _rawRequest.find("\r\n"))))
             return Response("400", _uri, _conf.getErrorPages());
-        _body = message.substr(message.find("\r\n\r\n") + 4);
+        _body = _rawRequest.substr(_rawRequest.find("\r\n\r\n") + 4);
     }
     return execute();
 };
@@ -83,7 +197,6 @@ std::string Request::parseFirstLine(std::string firstLine) {
 }
 
 bool Request::getHeaders(std::string message) {
-    //add checking if the header is already exist, then just?? add value to saved value
     std::string newline = message;
     std::string header = "";
     std::string value = "";
@@ -104,21 +217,22 @@ bool Request::getHeaders(std::string message) {
 
 Response Request::execute() {
     Response resp;
-    size_t  point;
-	std::string cgi_response;
+    std::string cgiResponse;
     
     this->_currentLocation = this->chooseLocation();
-    this->constructAbsPath();
-	//also added getters for current location and path for request method
-    if ((point = _path.find(_currentLocation.getCgiExtention())) != std::string::npos)
+    this->constructAbsPath(false);
+    if (!_currentLocation.getCgiExtention().empty() && _uri.find(_currentLocation.getCgiExtention()) != std::string::npos)
     {
-		CGI_handler cgi = CGI_handler();
-		try {
-			cgi_response = cgi.create_response(*this);
-		}
-		catch (const std::exception& e) {
-			std::cout << "Error code = " << e.what() << std::endl;
-		}
+            CGI_handler cgi = CGI_handler();
+            try {
+                cgiResponse = cgi.create_response(*this);
+                resp = Response("200", _uri, _conf.getErrorPages());
+                resp.setCgiResponse(cgiResponse);
+                return resp;
+            }
+            catch (const std::exception& e) {
+                return Response(e.what(), _uri, _conf.getErrorPages());
+            }
     }
     if (_currentLocation.getRedirectionCode() != "")
         return Response(_currentLocation.getRedirectionCode(), _currentLocation.getRedirectionUrl(), _conf.getErrorPages());
@@ -141,10 +255,11 @@ LocationCfg Request::chooseLocation(void) {
 
     for (std::vector<LocationCfg>::const_iterator it = _conf.getLocations().begin(); it != _conf.getLocations().end(); it++)
     {
-        path = "";
+        path = it->getPath();
         std::string sub = _uri.substr(0, it->getPath().size());
         if (_uri == it->getPath()) {
             location = *it;
+            _path = it->getRoot() + _uri.substr(1);
             break;
         }
         if (_uri.substr(0, it->getPath().size()) == it->getPath())
@@ -153,24 +268,27 @@ LocationCfg Request::chooseLocation(void) {
                 _path = it->getRoot() + _uri.substr(1);
             else
                 _path = it->getRoot() + _uri;
-        }
-        if (_path.size() > maxLen)
-        {
-            maxLen = _path.size();
-            location = *it;
+            if (path.size() > maxLen)
+            {
+                maxLen = path.size();
+                location = *it;
+            }
         }
     }
 
     return location;
 };
 
-void Request::constructAbsPath(void) {
+void Request::constructAbsPath(bool isIndex) {
     char cwd[2048];
 
     getcwd(cwd, 2048);
     _absPath += cwd;
-    _absPath += ("/" + _path);
-    std::cout << "uri: " << _uri << " path: " << _path << " abs path: " << _absPath << std::endl;
+    if (isIndex)
+        _absPath += "/" + _currentLocation.getRoot() + _currentLocation.getIndex();
+    else
+        _absPath += ("/" + _path);
+
 }
 
 Response Request::execGet(void)
@@ -182,7 +300,6 @@ Response Request::execGet(void)
     std::string content;
     struct stat buffer;
 
-    // return Response("500", _conf.getErrorPages(), _path);
     res = this->_autoindex();
     if (res == "500")
         return Response("500", _path, _conf.getErrorPages());
@@ -232,6 +349,7 @@ std::string Request::_autoindex(void)
             content = _indexFile();
             if (content == "")
                 return "404";
+            return content;
         }
     }
     return "";
@@ -252,13 +370,12 @@ std::string Request::_createHtmlPage(void)
     if (relativeUri != "/")
         relativeUri += "/";
     dpdf = opendir(this->_path.c_str());
-    if (dpdf != NULL)
-    {
-        page += "\t<ul>";
-        while ((epdf = readdir(dpdf)))
-            page += "\t\t<li><a href=\"" + relativeUri + std::string(epdf->d_name) + "\">" + std::string(epdf->d_name) + "</a></li>\n";
-        page += "\t</ul>";
-    }
+    if (dpdf == NULL)
+        return "";
+    page += "\t<ul>";
+    while ((epdf = readdir(dpdf)))
+        page += "\t\t<li><a href=\"" + relativeUri + std::string(epdf->d_name) + "\">" + std::string(epdf->d_name) + "</a></li>\n";
+    page += "\t</ul>";
 
     page += "</body>\n</html>";
     closedir(dpdf);
@@ -272,9 +389,9 @@ std::string Request::_indexFile(void)
     std::string newline;
 
     std::string index = _currentLocation.getIndex();
+    _path = _currentLocation.getRoot() + index;
+    constructAbsPath(true);
     std::fstream f(_currentLocation.getRoot() + index);
-    _path += _currentLocation.getIndex();
-    _absPath += _currentLocation.getIndex();
     fileStream.open(_path);
     if (!fileStream.is_open())
         return "";
@@ -333,7 +450,7 @@ Response Request::_handleFormData(void) {
         out << it->second;
         out.close();
     }
-    return Response("201", this->_uri, this->_conf.getErrorPages());
+    return Response("200", this->_uri, this->_conf.getErrorPages());
 }
 
 std::string   Request::_getFormDataBoundaryName(void) {
@@ -346,8 +463,6 @@ std::string   Request::_getFormDataBoundaryName(void) {
 }
 
 bool    Request::_isEndingBoundary(const size_t &startingPos, const size_t &boundarySize) {
-    std::cout << this->_body[startingPos + boundarySize] << std::endl;
-    std::cout << this->_body[startingPos + boundarySize + 1] << std::endl;
     return this->_body[startingPos + boundarySize] == '-' && this->_body[startingPos + boundarySize + 1] == '-';
 }
 
@@ -359,14 +474,12 @@ std::string  Request::_getFormDataFileName(const size_t &offset) {
         throw;
     fileNamePos += 10; // filename= and '"'
     while (this->_body[fileNamePos + i] != '"') ++i;
-    std::cout << this->_body.substr(fileNamePos, i) << std::endl;
     return this->_body.substr(fileNamePos, i);
 }
 
 std::string  Request::_getFormDataFileContent(const std::string &boundaryName, const size_t &offset) {
     size_t  startingFileContent = this->_body.find("\r\n\r\n", offset) + 4;
     size_t  endingBoundary = this->_body.find(boundaryName, offset) - BOUNDARY_PREFIX_LEN - 2; // 2 is for '\r\n'
-    std::cout << this->_body.substr(startingFileContent, endingBoundary - startingFileContent) << std::endl;
     return this->_body.substr(startingFileContent, endingBoundary - startingFileContent);
 }
 
@@ -397,14 +510,6 @@ std::string Request::getRequest(void) {
         request += ("\r\n" + _body + "\r\n");
     return request;
 };
-
-const std::string &Request::getPath() const {
-    return _path;
-}
-
-const LocationCfg &Request::getCurrentLocation() const {
-    return _currentLocation;
-}
 
 bool Request::_isDirectory(const char *path) {
    struct stat statbuf;

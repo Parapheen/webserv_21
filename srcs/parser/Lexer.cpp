@@ -43,7 +43,7 @@ void    Lexer::handleLine(const std::string &line) {
     this->_split(line, splitted, ' ');
     std::vector<std::string>::iterator  it = splitted.begin();
 
-    if (*it != "#" && line[line.size() - 1] != ';' && line[line.size() - 1] != '{' && line[line.size() - 1] != '}') {
+    if (*it != "#" && line[line.size() - 1] != ';' && line[line.size() - 1] != '{' && line[line.size() - 1] != '}' && *it != "") {
         std::ostringstream errMsg;
         errMsg << "Lexer error\nLine should end with ';', '{' or '}'\n" << line;
         throw std::runtime_error(errMsg.str());
@@ -54,6 +54,8 @@ void    Lexer::handleLine(const std::string &line) {
         else if (*it == "}")
             this->_tokens.push_back(std::pair<std::string, TOKENS>(*it, CLOSE_BRACKET));
         else if (*it == "#") // comment line
+            break ;
+        else if (*it == "") // empty line
             break ;
         else {
             if ((*it)[(*it).size() - 1] == ';') {

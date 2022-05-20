@@ -24,15 +24,16 @@ class ClientsManager : public Manager<Client> {
 
         Client                              *createNewClient(const int &fd);
 
-        // wrappers over manager methods
         const std::map<int, Client *>       &getClients(void) const;
         Client                              *getClient(const int &fd);
         TCPServer                           *getServerByClientFd(const int &fd);
         const Response                      &getResponseByClientFd(const int &fd);
+        const Request                       &getRequestByClientFd(const int &fd);
         void                                addClient(TCPServer *server, Client *client);
         void                                writeToClient(const int &fd);
         void                                removeClient(const int &fd);
         void                                setResponseToClient(const int &fd, const Response &response);
+        void                                setRequestToClient(const int &fd, const Request &response);
 };
 
 std::ostream &operator<<(std::ostream &o, ClientsManager &instance);

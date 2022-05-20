@@ -7,8 +7,12 @@ int main(int argc, char **argv)
     Webserver   webserv = Webserver();
     std::string configPath = "./configs/example_1.conf";
 
-    if (argc != 2)
+    if (argc == 2)
         configPath = argv[1];
+    else if (argc > 2) {
+        std::cerr << "Invalid usage" << std::endl;
+        return (1);
+    }
     try {
         parser.parse(configPath);
         webserv.run(parser.getServers());

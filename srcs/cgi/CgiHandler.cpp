@@ -1,9 +1,4 @@
-//
-// Created by Namor Scarab on 5/13/22.
-//
-
-#include "CGI_handler.hpp"
-#include <fcntl.h>
+#include "CgiHandler.hpp"
 
 CGI_handler::CGI_handler() {}
 
@@ -11,6 +6,7 @@ std::string CGI_handler::create_response(Request &request) {
 
     location = request.getCurrentLocation();
     rel_path = request.getPath();
+    abs_path = request.getAbsPath();
     extention = location.getCgiExtention();
 
     //find path to script from path
@@ -18,6 +14,10 @@ std::string CGI_handler::create_response(Request &request) {
         rel_path.erase(0, 1);
     if (rel_path.find(extention) != std::string::npos)
         script_path_ = rel_path.substr(0, rel_path.find(extention) + extention.length());
+    if (abs_path.find_first_of("/") == 0)
+        abs_path.erase(0, 1);
+    if (abs_path.find(extention) != std::string::npos)
+        full_script_path_ = abs_path.substr(0, abs_path.find(extention) + extention.length());
 //    std::cout << "script path: " << script_path_ << std::endl; //DEBUG
 
     //Create cache files - better on base of fd
@@ -77,6 +77,8 @@ std::string CGI_handler::create_response(Request &request) {
 
     pid = fork();
     if (pid == -1) {
+        close(request_fd);
+        close(response_fd);
         throw ForkError();
     }
     if (pid) {
@@ -161,11 +163,10 @@ std::string CGI_handler::create_response(Request &request) {
 //    {
 //        std::cout << "header: " << it->first << " name: " << it->second << std::endl;
 //    }
-//    content_length = "Content-Length: " + std::to_string(body_string.size());
 
 //if no content length - we signal about end of body
     if (!headers.count("Content-Length"))
-        body_string = body_string + "0\r\n\r\n";
+        body_string = body_string.substr(0, body_string.find("\r\n\r\n"));
 
     //add protocol and status
     result_str = "HTTP/1.1 200 OK\r\n"
@@ -176,10 +177,11 @@ std::string CGI_handler::create_response(Request &request) {
 }
 
 char **CGI_handler::create_argv() const {
-    char **args = static_cast<char**>(malloc(sizeof(char*) * (1 + 1)));
+    char **args = static_cast<char**>(malloc(sizeof(char*) * (2 + 1)));
 
     args[0] = strdup(BIN_PATH);
-    args[1] = nullptr;
+    args[1] = strdup(full_script_path_.c_str());
+    args[2] = nullptr;
     return args;
 }
 
@@ -213,6 +215,7 @@ char **CGI_handler::create_envp(Request &request) const {
 
     envp["REQUEST_METHOD"] = request.getMethod();
     envp["SCRIPT_NAME"]    = script_path_;
+    envp["SCRIPT_FILENAME"]    = full_script_path_;
 
     //utochnit with paths - where can a find ? path - is she counting on it?
     std::string path_info;

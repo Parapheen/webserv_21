@@ -5,7 +5,6 @@ Response::Response(void):
 {
     initHeaders();
     initStatusMessages();
-    //setHeaders(); // ???? uri is need, but what is uri for nothing?? maybe there no default constructor??
 };
 
 Response::Response(Response const& copy):
@@ -54,8 +53,8 @@ void Response::initStatusMessages()
     _statusMessages["307"] = "Temporary Redirect";
     _statusMessages["308"] = "Permanent Redirect";
     _statusMessages["400"] = "Bad Request";
-    _statusMessages["401"] = "Unauthorized"; // ??
-    _statusMessages["402"] = "Payment Required"; // ??
+    _statusMessages["401"] = "Unauthorized";
+    _statusMessages["402"] = "Payment Required"; 
     _statusMessages["403"] = "Forbidden";
     _statusMessages["404"] = "Not Found";
     _statusMessages["405"] = "Method Not Allowed";
@@ -78,11 +77,9 @@ void Response::setHeaders(const std::string &uri)
     if (_statusCode[0] == '3')
         setLocation(uri);
     else
-        setContentLocation(uri); // is it correct? 
+        setContentLocation(uri); 
     setLastModified(uri);
     setRetryAfter();
-    // setTransferEncoding(); // ????
-    // setWwwAuthenticate(); // ???? 
 };
 
 void Response::setDate()
@@ -100,7 +97,6 @@ void Response::setContentType(const std::string &file)
     std::string exp;
     if (dot != std::string::npos)
     {
-        //switch
         exp = file.substr(dot + 1);
         if (exp == "html")
             _headers["Content-Type"] = "text/html";
@@ -159,11 +155,6 @@ void Response::setRetryAfter(void)
         _headers["Retry-After"] = "10";
 };
 
-// void Response::setTransferEncoding()
-// {
-
-// };
-
 void Response::setWwwAuthenticate(void)
 {
     if (_statusCode == "401")
@@ -190,7 +181,6 @@ std::string Response::getResponse(void)
         fileStream.close();
         response += ("\r\n" + _body + "\r\n");
     }
-    // All 1xx (Informational), 204 (No Content), and 304 (Not Modified) responses do not include a message body
     else if (!(_statusCode == "204" || _statusCode == "304" || _statusCode[0] == '1'))
         response += ("\r\n" + _body + "\r\n");
     return response;

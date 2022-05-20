@@ -1,5 +1,4 @@
 #include "Request.hpp"
-#include "Autoindex.hpp"
 #include "../cgi/CgiHandler.hpp"
 #define BOUNDARY_PREFIX_LEN 2
 
@@ -73,7 +72,7 @@ REQUEST_STATE Request::collectRequest(void)
             _parsingFirstLine += _rawRequest.substr(0, pos);
             if ((_error = parseFirstLine(_parsingFirstLine)) != "")
                 return ERROR;
-            _parsingHeaders = _rawRequest.substr(pos + 1);
+            _parsingHeaders = _rawRequest.substr(pos + 2);
             _status = IS_HEADERS;
         }
     }
@@ -87,7 +86,7 @@ REQUEST_STATE Request::collectRequest(void)
         }
         else
         {
-            _parsingBody = _rawRequest.substr(pos + 1);
+            _parsingBody = _rawRequest.substr(pos + 4);
             _status = IS_BODY;
         }
     }
@@ -154,7 +153,6 @@ std::string Request::nextLine(std::string const& text)
     if (pos == std::string::npos)
         return text;
     str = text.substr(0, pos);
-    //text = text.substr(pos + 1);
     return str;
 };
 
@@ -165,7 +163,7 @@ Response Request::parse(void) {
         return Response("400", "", _conf.getErrorPages());
     if ((error = parseFirstLine(_rawRequest.substr(0, _rawRequest.find("\r\n")))) != "")
         return Response(error, _uri, _conf.getErrorPages());
-    if (_rawRequest.find("\r\n\r\n") == std::string::npos)
+    if (_rawRequest.find("\r\n\r\n") == std::string::npos || _rawRequest.substr(_rawRequest.find("\r\n\r\n")) == "")
     {
         if (_rawRequest.find("\r\n") == std::string::npos)
             return Response("400", _uri, _conf.getErrorPages());
@@ -199,7 +197,6 @@ std::string Request::parseFirstLine(std::string firstLine) {
 }
 
 bool Request::getHeaders(std::string message) {
-    //add checking if the header is already exist, then just?? add value to saved value
     std::string newline = message;
     std::string header = "";
     std::string value = "";
@@ -295,7 +292,6 @@ void Request::constructAbsPath(bool isIndex) {
     else
         _absPath += ("/" + _path);
 
-    std::cout << "uri: " << _uri << " path: " << _path << " abs path: " << _absPath << std::endl;
 }
 
 Response Request::execGet(void)

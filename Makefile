@@ -10,7 +10,7 @@ SRCS 			=		srcs/main.cpp srcs/server/TCPServer.cpp srcs/server/ClientsManager.cp
 						srcs/server/Webserver.cpp srcs/server/EventLoop.cpp \
 						srcs/parser/Lexer.cpp srcs/parser/Parser.cpp srcs/parser/ServerCfg.cpp \
 						srcs/parser/LocationCfg.cpp srcs/http/Request.cpp srcs/http/Response.cpp \
-						srcs/http/Autoindex.cpp srcs/cgi/CgiHandler.cpp
+						srcs/cgi/CgiHandler.cpp
 
 %.o: %.cpp
 	$(CC) $(FLAGS) -c $< -o $@

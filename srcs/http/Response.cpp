@@ -8,7 +8,7 @@ Response::Response(void):
 };
 
 Response::Response(Response const& copy):
-    _version(copy._version), _statusCode(copy._statusCode), _headers(copy._headers), _body(copy._body), _statusMessages(copy._statusMessages), _errorPages(copy._errorPages)
+    _version(copy._version), _cgi_response(copy._cgi_response), _statusCode(copy._statusCode), _headers(copy._headers), _body(copy._body), _statusMessages(copy._statusMessages), _errorPages(copy._errorPages)
 {
     initHeaders();
     initStatusMessages();
@@ -31,6 +31,7 @@ Response& Response::operator=(Response const& source)
         initHeaders();
         initStatusMessages();
         _version = source._version;
+        _cgi_response = source._cgi_response;
         _statusCode = source._statusCode;
         _headers = source._headers;
         _body = source._body;

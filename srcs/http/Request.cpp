@@ -215,37 +215,48 @@ bool Request::getHeaders(std::string message) {
     return false;
 }
 
+METHOD Request::_strMethodToEnum(const std::string &method) {
+    if (method == "GET")
+        return GET;
+    else if (method == "POST")
+        return POST;
+    else if (method == "DELETE")
+        return DELETE;
+    return GET;
+}
+
 Response Request::execute() {
     Response resp;
     std::string cgiResponse;
     
     this->_currentLocation = this->chooseLocation();
     this->constructAbsPath(false);
-    if (!_currentLocation.getCgiExtention().empty() && _uri.find(_currentLocation.getCgiExtention()) != std::string::npos)
-    {
-            CGI_handler cgi = CGI_handler();
-            try {
-                cgiResponse = cgi.create_response(*this);
-                resp = Response("200", _uri, _conf.getErrorPages());
-                resp.setCgiResponse(cgiResponse);
-                return resp;
-            }
-            catch (const std::exception& e) {
-                return Response(e.what(), _uri, _conf.getErrorPages());
-            }
-    }
-    if (_currentLocation.getRedirectionCode() != "")
-        return Response(_currentLocation.getRedirectionCode(), _currentLocation.getRedirectionUrl(), _conf.getErrorPages());
+    if (_currentLocation.methodExists(_strMethodToEnum(_method))) {
+        if (!_currentLocation.getCgiExtention().empty() && _uri.find(_currentLocation.getCgiExtention()) != std::string::npos)
+        {
+                CGI_handler cgi = CGI_handler();
+                try {
+                    cgiResponse = cgi.create_response(*this);
+                    resp = Response("200", _uri, _conf.getErrorPages());
+                    resp.setCgiResponse(cgiResponse);
+                    return resp;
+                }
+                catch (const std::exception& e) {
+                    return Response(e.what(), _uri, _conf.getErrorPages());
+                }
+        }
+        if (_currentLocation.getRedirectionCode() != "")
+            return Response(_currentLocation.getRedirectionCode(), _currentLocation.getRedirectionUrl(), _conf.getErrorPages());
 
-    if (_method == "GET" && _currentLocation.methodExists(GET))
-        resp = execGet();
-    else if (_method == "POST" && _currentLocation.methodExists(POST))
-        resp = execPost();
-    else if (_method == "DELETE" && _currentLocation.methodExists(DELETE))
-        resp = execDelete();
-    else
-        return Response("405", _uri, _conf.getErrorPages());
-    return resp;
+        if (_method == "GET" && _currentLocation.methodExists(GET))
+            resp = execGet();
+        else if (_method == "POST" && _currentLocation.methodExists(POST))
+            resp = execPost();
+        else if (_method == "DELETE" && _currentLocation.methodExists(DELETE))
+            resp = execDelete();
+        return resp;
+    }
+    return Response("405", _uri, _conf.getErrorPages());
 };
 
 LocationCfg Request::chooseLocation(void) {

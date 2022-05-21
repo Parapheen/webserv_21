@@ -61,6 +61,7 @@ private:
     std::string _autoindex(void);
     std::string _indexFile(void);
     std::string _createHtmlPage(void);
+    METHOD _strMethodToEnum(const std::string &method);
 
 public:
     Request(void);

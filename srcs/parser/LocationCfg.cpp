@@ -51,8 +51,6 @@ void                  LocationCfg::addMethod(const std::string &method) {
         _meth = GET;
     else if (method == "POST")
         _meth = POST;
-    else if (method == "PUT")
-        _meth = PUT;
     else if (method == "DELETE")
         _meth = DELETE;
     else {

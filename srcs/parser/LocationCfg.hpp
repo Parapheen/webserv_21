@@ -8,7 +8,6 @@ enum METHOD {
     GET,
     POST,
     DELETE,
-    PUT,
 };
 
 class LocationCfg {

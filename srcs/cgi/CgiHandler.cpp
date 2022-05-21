@@ -18,6 +18,7 @@ std::string CGI_handler::create_response(Request &request) {
         abs_path.erase(0, 1);
     if (abs_path.find(extention) != std::string::npos)
         full_script_path_ = abs_path.substr(0, abs_path.find(extention) + extention.length());
+
 //    std::cout << "script path: " << script_path_ << std::endl; //DEBUG
 
     //Create cache files - better on base of fd
@@ -163,7 +164,6 @@ std::string CGI_handler::create_response(Request &request) {
 //    {
 //        std::cout << "header: " << it->first << " name: " << it->second << std::endl;
 //    }
-
 //if no content length - we signal about end of body
     if (!headers.count("Content-Length"))
         body_string = body_string.substr(0, body_string.find("\r\n\r\n"));

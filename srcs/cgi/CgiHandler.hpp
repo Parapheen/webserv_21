@@ -3,7 +3,6 @@
 #include "../http/Request.hpp"
 #include "../http/Response.hpp"
 #include <fcntl.h>
-//#define BIN_PATH "cgi_bin"
 #define BIN_PATH "python"
 
 class CGI_handler {

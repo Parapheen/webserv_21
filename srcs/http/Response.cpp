@@ -71,14 +71,17 @@ void Response::initHeaders()
 
 void Response::setHeaders(const std::string &uri)
 {
+    std::string modifiedUri = uri; // if error_page is set for status code, modify uri
+    if (_hasDefaultErrorPage(_statusCode))
+        modifiedUri = _errorPages.find(_statusCode)->second;
     setDate();
-    setContentType(uri);
+    setContentType(modifiedUri);
     setContentLength();
     if (_statusCode[0] == '3')
-        setLocation(uri);
+        setLocation(modifiedUri);
     else
-        setContentLocation(uri); 
-    setLastModified(uri);
+        setContentLocation(modifiedUri); 
+    setLastModified(modifiedUri);
     setRetryAfter();
 };
 
@@ -173,8 +176,9 @@ std::string Response::getResponse(void)
     if (this->_hasDefaultErrorPage(this->_statusCode)) {
         std::ifstream fileStream;
         std::string fileContent;
+        std::string errorPagePath = _errorPages.find(_statusCode)->second;
 
-        fileStream.open(_errorPages.find(_statusCode)->second);
+        fileStream.open(errorPagePath);
 
         while(getline(fileStream, fileContent))
             _body += fileContent;

@@ -3,7 +3,7 @@
 #include "../http/Request.hpp"
 #include "../http/Response.hpp"
 #include <fcntl.h>
-#define BIN_PATH "uploader.cgi"
+#define BIN_PATH "python"
 
 class CGI_handler {
 public:
@@ -46,8 +46,10 @@ public:
         char **create_argv() const;
         char **create_envp(Request &request) const;
 
-        std::string script_path_;
-        LocationCfg location;
-        std::string rel_path;
-        std::string extention;
+    std::string script_path_;
+    std::string full_script_path_;
+    LocationCfg location;
+    std::string rel_path;
+    std::string abs_path;
+    std::string extention;
 };

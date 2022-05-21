@@ -11,6 +11,9 @@ class Response
 {
 private:
     std::string                         _version;
+    std::string                         _cgi_response;
+
+private:
     std::string                         _statusCode;
     std::map<std::string, std::string>  _headers;
     std::string                         _body;
@@ -30,6 +33,7 @@ public:
     void initStatusMessages(void);
     void initHeaders(void);
 
+    void setCgiResponse(const std::string &cgiResponse);
     void setHeaders(const std::string &uri); //-
     void setDate(void);
     void setContentType(const std::string &file);
@@ -50,6 +54,7 @@ public:
     void setBody(const std::string &body);
 
     std::string getResponse(void);
+    const std::string &getCgiResponse() const;
 };
 
 std::ostream& operator<<(std::ostream &out, Response &response);

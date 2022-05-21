@@ -217,25 +217,22 @@ bool Request::getHeaders(std::string message) {
 
 Response Request::execute() {
     Response resp;
-    size_t  point;
     std::string cgiResponse;
     
     this->_currentLocation = this->chooseLocation();
     this->constructAbsPath(false);
-    if ((point = _uri.find_last_of(".")) != std::string::npos)
+    if (!_currentLocation.getCgiExtention().empty() && _uri.find(_currentLocation.getCgiExtention()) != std::string::npos)
     {
-        if (_uri.substr(point) == _currentLocation.getCgiExtention())
-        {
             CGI_handler cgi = CGI_handler();
             try {
                 cgiResponse = cgi.create_response(*this);
-                _body = cgiResponse;
-                return Response("200", _uri, _conf.getErrorPages());
+                resp = Response("200", _uri, _conf.getErrorPages());
+                resp.setCgiResponse(cgiResponse);
+                return resp;
             }
             catch (const std::exception& e) {
                 return Response(e.what(), _uri, _conf.getErrorPages());
             }
-        }
     }
     if (_currentLocation.getRedirectionCode() != "")
         return Response(_currentLocation.getRedirectionCode(), _currentLocation.getRedirectionUrl(), _conf.getErrorPages());
@@ -258,7 +255,7 @@ LocationCfg Request::chooseLocation(void) {
 
     for (std::vector<LocationCfg>::const_iterator it = _conf.getLocations().begin(); it != _conf.getLocations().end(); it++)
     {
-        path = "";
+        path = it->getPath();
         std::string sub = _uri.substr(0, it->getPath().size());
         if (_uri == it->getPath()) {
             location = *it;
@@ -271,11 +268,11 @@ LocationCfg Request::chooseLocation(void) {
                 _path = it->getRoot() + _uri.substr(1);
             else
                 _path = it->getRoot() + _uri;
-        }
-        if (_path.size() > maxLen)
-        {
-            maxLen = _path.size();
-            location = *it;
+            if (path.size() > maxLen)
+            {
+                maxLen = path.size();
+                location = *it;
+            }
         }
     }
 
@@ -338,7 +335,7 @@ std::string Request::_autoindex(void)
     std::string newline;
     std::fstream fs;
 
-    if (stat(_path.c_str(), &s) != -1 && S_ISDIR(s.st_mode))
+    if (_uri[_uri.size() - 1] == '/' || (stat(_path.c_str(), &s) == 0 && (s.st_mode & S_IFDIR)))
     {
         if (_currentLocation.getAutoIndex())
         {
@@ -370,7 +367,7 @@ std::string Request::_createHtmlPage(void)
     <body>";
 
     std::string relativeUri = this->_uri;
-    if (relativeUri != "/" && relativeUri[relativeUri.size() - 1] != '/')
+    if (relativeUri != "/")
         relativeUri += "/";
     dpdf = opendir(this->_path.c_str());
     if (dpdf == NULL)

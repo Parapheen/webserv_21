@@ -36,6 +36,7 @@ Response& Response::operator=(Response const& source)
         _body = source._body;
         _statusMessages = source._statusMessages;
         _errorPages = source._errorPages;
+        _cgi_response = source._cgi_response;
     }
     return *this;
 };
@@ -169,6 +170,8 @@ void Response::setWwwAuthenticate(void)
 std::string Response::getResponse(void)
 {
     std::string response = "";
+    if (_cgi_response.size())
+        return _cgi_response;
     response += (_version + " " + _statusCode + " " + _statusMessages[_statusCode] + "\r\n");
     for (std::map<std::string, std::string>::iterator it = _headers.begin(); it != _headers.end(); it++)
         response += (it->first + ": " + it->second + "\r\n");
@@ -201,7 +204,16 @@ bool    Response::_hasDefaultErrorPage(const std::string &statusCode) {
     return false;
 }
 
-void Response::setBody(const std::string &body) { this->_body = body; };
+void Response::setBody(const std::string &body) { this->_body = body; }
+
+void Response::setCgiResponse(const std::string &cgiResponse) {
+    _cgi_response = cgiResponse;
+}
+
+const std::string &Response::getCgiResponse() const {
+    return _cgi_response;
+};
+
 
 std::ostream& operator<<(std::ostream &out, Response &response)
 {

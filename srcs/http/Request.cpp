@@ -256,24 +256,24 @@ LocationCfg Request::chooseLocation(void) {
     for (std::vector<LocationCfg>::const_iterator it = _conf.getLocations().begin(); it != _conf.getLocations().end(); it++)
     {
         path = it->getPath();
-        std::string sub = _uri.substr(0, it->getPath().size());
-        if (_uri == it->getPath()) {
+        std::string sub = _uri.substr(0, path.size());
+        if (_uri == path) {
             location = *it;
             _path = it->getRoot() + _uri.substr(1);
             break;
         }
-        if (_uri.substr(0, it->getPath().size()) == it->getPath())
+        if (_uri.substr(0, path.size()) == path && _uri.size() == path.size())
         {
-            if (it->getRoot()[it->getRoot().size() - 1] == '/' && _uri[0] == '/')
-                _path = it->getRoot() + _uri.substr(1);
-            else
-                _path = it->getRoot() + _uri;
             if (path.size() > maxLen)
             {
                 maxLen = path.size();
                 location = *it;
             }
         }
+        if (_uri.substr(0, path.size()) == path && it->getRoot()[it->getRoot().size() - 1] == '/' && _uri[0] == '/')
+            _path = it->getRoot() + _uri.substr(1);
+        else
+            _path = it->getRoot() + _uri;
     }
 
     return location;
@@ -335,7 +335,7 @@ std::string Request::_autoindex(void)
     std::string newline;
     std::fstream fs;
 
-    if (_uri[_uri.size() - 1] == '/' || (stat(_path.c_str(), &s) == 0 && (s.st_mode & S_IFDIR)))
+    if (stat(_path.c_str(), &s) != -1 && S_ISDIR(s.st_mode))
     {
         if (_currentLocation.getAutoIndex())
         {
@@ -367,7 +367,7 @@ std::string Request::_createHtmlPage(void)
     <body>";
 
     std::string relativeUri = this->_uri;
-    if (relativeUri != "/")
+    if (relativeUri != "/" && relativeUri[relativeUri.size() - 1] != '/')
         relativeUri += "/";
     dpdf = opendir(this->_path.c_str());
     if (dpdf == NULL)
